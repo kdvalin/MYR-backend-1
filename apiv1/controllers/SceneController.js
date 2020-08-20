@@ -51,6 +51,26 @@ function buildScene(body, settings, dest = undefined){
 }
 
 module.exports = {
+    requireAuth: async function(req, res, next) {
+        if(!req.headers['x-access-token']) {
+            return res.status(400).json({
+                message: "No authorization token sent",
+                error: "Bad Request"
+            });
+        }
+
+        req.uid = await verifyGoogleToken(req.headers['x-access-token']);
+        req.admin = await isAdmin(req.header['x-access-token']);
+
+        if(!req.uid && !req.admin) {
+            return resp.status(401).json({
+                message: "Invalid token sent",
+                error: "Unauthorized"
+            });
+        }
+
+        next();
+    },
     create: async function(req, res){
         let body = req.body;
         if(Object.keys(body).length === 0 || !req.headers['x-access-token']){ //Check if a body was supplied
@@ -337,5 +357,31 @@ module.exports = {
             id: scene._id,
             imgError: imgError
         });
+    },
+    export: async function(req, resp) {
+        const respHeaders = {
+            "Content-Disposition": "attachment; filename=\"MYR-export.json\""
+        };
+
+        if(!req.uid) {
+            return resp.status(501).json({
+                message: "An admin cannot export scenes at this time",
+                error: "Not impelmented"
+            });
+        }
+
+        let scenes;
+        try {
+            scenes = await SceneSchema.find({uid: req.uid});
+        }catch(err) {
+            return resp.status(500).json({
+                message: "Error fetching scenes",
+                error: err
+            });
+        }
+        if(!scenes){
+            resp.status(204).send();
+        }
+        return resp.status(200).set('Content-Disposition', respHeaders['Content-Disposition']).json(scenes);
     }
 };
