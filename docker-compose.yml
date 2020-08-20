@@ -36,4 +36,4 @@ services:
     environment: 
       MONGO_CONNECTION_STRING: 'mongodb://database:27017/ecg-myr'
     working_dir: /app
-    command: npm start
+    command: npm run dev

@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "start": "node ./bin/www",
+    "dev": "nodemon ./bin/www",
     "test": "jest",
     "coverage": "jest --coverage"
   },
@@ -34,6 +35,7 @@
   "devDependencies": {
     "eslint": "^5.16.0",
     "jest": "^24.8.0",
+    "nodemon": "^2.0.4",
     "superagent": "^4.1.0",
     "supertest": "^3.4.2"
   }
