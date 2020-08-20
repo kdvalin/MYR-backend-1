@@ -63,7 +63,7 @@ module.exports = {
         req.admin = await isAdmin(req.header['x-access-token']);
 
         if(!req.uid && !req.admin) {
-            return resp.status(401).json({
+            return res.status(401).json({
                 message: "Invalid token sent",
                 error: "Unauthorized"
             });
@@ -359,6 +359,14 @@ module.exports = {
         });
     },
     export: async function(req, resp) {
+        const exportedFileds = {
+            name: 1,
+            code: 1,
+            desc: 1,
+            settings: 1,
+            _id: 0 //Skip _id
+        };
+
         const respHeaders = {
             "Content-Disposition": "attachment; filename=\"MYR-export.json\""
         };
@@ -372,7 +380,7 @@ module.exports = {
 
         let scenes;
         try {
-            scenes = await SceneSchema.find({uid: req.uid});
+            scenes = await SceneSchema.find({uid: req.uid}, exportedFileds).exec();
         }catch(err) {
             return resp.status(500).json({
                 message: "Error fetching scenes",
@@ -380,8 +388,9 @@ module.exports = {
             });
         }
         if(!scenes){
-            resp.status(204).send();
+            return resp.status(204).send();
         }
+
         return resp.status(200).set('Content-Disposition', respHeaders['Content-Disposition']).json(scenes);
     }
 };
