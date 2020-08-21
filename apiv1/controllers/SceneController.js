@@ -366,7 +366,7 @@ module.exports = {
             settings: 1,
             _id: 0 //Skip _id
         };
-
+        const id = req.query.id;
         const respHeaders = {
             "Content-Disposition": "attachment; filename=\"MYR-export.json\""
         };
@@ -380,7 +380,11 @@ module.exports = {
 
         let scenes;
         try {
-            scenes = await SceneSchema.find({uid: req.uid}, exportedFileds).exec();
+            if(id) {
+                scenes = await SceneSchema.find({uid: req.uid, _id: ObjectId(id)}, exportedFileds).exec();
+            }else {
+                scenes = await SceneSchema.find({uid: req.uid}, exportedFileds).exec();
+            }
         }catch(err) {
             return resp.status(500).json({
                 message: "Error fetching scenes",
