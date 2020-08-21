@@ -364,7 +364,7 @@ module.exports = {
             code: 1,
             desc: 1,
             settings: 1,
-            _id: 0 //Skip _id
+            _id: 1 //Skip _id
         };
         const id = req.query.id;
         const respHeaders = {
@@ -394,7 +394,17 @@ module.exports = {
         if(!scenes){
             return resp.status(204).send();
         }
+        let output = [];
 
-        return resp.status(200).set('Content-Disposition', respHeaders['Content-Disposition']).json(scenes);
+        scenes.forEach(scene => {
+            const imgBase64 = fs.readFileSync(`${destFolder}/${scene._id}.jpg`).toString('base64');
+            const sceneObj = scene.toObject();
+
+            sceneObj.image = imgBase64;
+            delete sceneObj._id
+            output.push(sceneObj);
+        });
+
+        return resp.status(200).set('Content-Disposition', respHeaders['Content-Disposition']).json(output);
     }
 };
