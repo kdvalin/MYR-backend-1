@@ -401,7 +401,8 @@ module.exports = {
             const sceneObj = scene.toObject();
 
             sceneObj.image = imgBase64;
-            delete sceneObj._id
+            delete sceneObj._id;
+            delete sceneObj.settings.collectionID;
             output.push(sceneObj);
         });
 
