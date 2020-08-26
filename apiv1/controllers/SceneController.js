@@ -187,9 +187,12 @@ module.exports = {
             });
         }
         
-        let result = deleteImage(id);
-        if(result !== true && result.errorCode === 500) {
-            return resp.status(500).json(result);
+        try {
+            deleteImage(id);
+        }catch(err) {
+            if(err.errorCode !== 404) {
+                return resp.status(err.errorCode).json(err);
+            }
         }
 
         try{

@@ -6,6 +6,7 @@ const fs = require('fs');
 const previewRef = "/apiv1/preview/id";
 const sceneID = "5de934ec824a0a4598aa1fed";
 const altSceneID = "5de93a961466c65b7fda92dc";
+const garbageID = "444444444444444444444444";
 const validHeaders = {"x-access-token": "r1squCvH0uTbobuoTV9G"};
 
 const image_orig = `${__dirname}/img.jpeg`;
@@ -38,7 +39,7 @@ describe("Creating a preview image", () =>{
        }).expect(401);
    });
    test("Creating an image without an existing scene should return 404", () =>{
-        return request(app).post(`${previewRef}/bobross`).set(validHeaders).send({
+        return request(app).post(`${previewRef}/${garbageID}`).set(validHeaders).send({
             data: image
         }).expect(404);
    });
@@ -75,7 +76,7 @@ describe("Updating a preview image", () => {
        }).expect(401);
    });
    test("Updating an image without an existing scene should return 404", () =>{
-        return request(app).put(`${previewRef}/bobross`).set(validHeaders).send({
+        return request(app).put(`${previewRef}/${garbageID}`).set(validHeaders).send({
             data: image
         }).expect(404);
    });
@@ -117,13 +118,10 @@ describe("Deleting a preview image", () => {
         return request(app).delete(`${previewRef}/${sceneID}`).expect(401);
    });
    test("Deleting an image without an existing scene should return 404", () =>{
-        return request(app).delete(`${previewRef}/bobross`).set(validHeaders).expect(404);
+        return request(app).delete(`${previewRef}/${garbageID}`).set(validHeaders).expect(404);
     });
     test("Deleting an image with the wrong user ID should return 401", () =>{
         return request(app).delete(`${previewRef}/${sceneID}`).set({"x-access-token": "nope"}).expect(401);
-    });
-    test("Deleting an image without an existing scene should return 404", () =>{
-        return request(app).delete(`${previewRef}/bobross`).set(validHeaders).expect(404);
     });
     test("Deleting an image with everything valid should return 204", () => {
         return request(app).delete(`${previewRef}/${sceneID}`).set(validHeaders).expect(204).then(() =>{

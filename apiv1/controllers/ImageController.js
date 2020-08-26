@@ -13,7 +13,7 @@ const tmp = "/tmp";
 
 function deleteImage(id){
     if(!fs.existsSync(`${imgDest}/${id}.jpg`)){
-        return {
+        throw {
             errorCode: 404,
             error: "Not Found",
             message: `No Image exists for ${id}`
@@ -23,7 +23,7 @@ function deleteImage(id){
     try{
         fs.unlinkSync(`${imgDest}/${id}.jpg`);
     }catch(err){
-        return {
+        throw {
             errorCode: 500,
             error: "Internal Server Error",
             message: err
@@ -53,19 +53,31 @@ function createImage(base64, id){
     try{
         fs.writeFileSync(tmpFilePath, data, "base64");
     }catch(err) {
-        throw "Error writing temporary image for validation";
+        throw {
+            code: 500,
+            message: "Error writing temporary image for validation",
+            error: err
+        };
     }
 
     let validImage = isImage(tmpFilePath);
     fs.unlinkSync(tmpFilePath);
     if(!validImage) {
-        throw "Invalid image received";
+        throw {
+            code: 400,
+            message: "Invalid image received",
+            error: "Bad Request"
+        };
     }
     
     try{
         fs.writeFileSync(`${imgDest}/${id}.jpg`, data, "base64");
     }catch(err){
-        throw "Could not write image to final destination";
+        throw {
+            code: 500,
+            message: "Could not write image to final destination",
+            error: err
+        };
     }
 }
 
@@ -106,9 +118,9 @@ module.exports = {
         try {
             createImage(req.body.data, id);
         }catch(err) {
-            return resp.status(500).json({
-                message: "Error creating image",
-                error: err
+            return res.status(err.code).json({
+                message: err.message,
+                error: err.error
             });
         }
         
@@ -119,14 +131,16 @@ module.exports = {
 
     delete: async function (req, resp){
         let id = req.params.id;
-    
-        if(deleteImage(id)){
-            return resp.status(204).send();
+        
+        try{
+            deleteImage(id);
+        }catch(err) {
+            return resp.status(err.errorCode).json({
+                message: err.message,
+                error: err.error
+            });
         }
-        return resp.status(404).json({
-            message: `Could not find an image for scene ${id}`,
-            error: "Not found"
-        });
+        return resp.status(204).send();
     },
 
     update: function(req, resp){
@@ -135,9 +149,9 @@ module.exports = {
         try {
             createImage(req.body.data, id);
         }catch(err) {
-            return res.status(500).json({
-                message: "Error updating image",
-                error: err
+            return resp.status(err.code).json({
+                message: err.message,
+                error: err.error
             });
         }
 
@@ -165,16 +179,16 @@ module.exports = {
     },
     requireAuth: async function(req, res, next) {
         if(!req.headers["x-access-token"]) {
-            return res.status(400).json({
+            return res.status(401).json({
                 message: "Did not receive auth token",
-                error: "Bad Request"
+                error: "Bad Unauthorized"
             });
         }
         res.uid = await verifyGoogleToken(req.headers["x-access-token"]);
         res.admin = await isAdmin(req.headers["x-access-token"]);
 
         if(!res.uid && !res.admin) {
-            return res.status(400).json({
+            return res.status(401).json({
                 message: "Invalid auth token received",
                 error: "Unauthorized"
             });
@@ -219,6 +233,17 @@ module.exports = {
             });
         }
 
+        next();
+    },
+    imageExists: async function(req, res, next) {
+        const sceneId = req.params.id;
+
+        if(!fs.existsSync(`${imgDest}/${sceneId}.jpg`)) {
+            return res.status(404).json({
+                message: "The image does not exist, use a POST request",
+                error: "Not Found"
+            });
+        }
         next();
     },
     deleteImage: deleteImage,
