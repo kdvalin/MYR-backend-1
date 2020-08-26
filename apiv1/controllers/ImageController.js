@@ -33,13 +33,13 @@ function deleteImage(id){
 }
 
 /**
- * Creates an image based off of a data URL
+ * Checks if the provided data URL makes a valid image and then creates an image based off of a data URL
  * 
  * @param {string} base64 The image represented as a base64 string
- * @param {string} path The path for the file to be saved
- * @returns {boolean} True on successful write to file, false otherwise
+ * @param {string} id The scene ID for the image
+ * @throws {string} Throws a string on error explaining why it failed
  */
-function createImage(base64, path){
+function createImage(base64, id){
     let data = "";
     
     try{
@@ -49,105 +49,25 @@ function createImage(base64, path){
         data = base64;
     }
 
+    let tmpFilePath = `${tmp}/${id}-${Date.now()}.jpg`;
     try{
-        fs.writeFileSync(path, data, "base64");
-    }catch(err){
-        console.error(err);
-        return false;
-    }
-    return true;
-}
-
-/**
- * Processes common failures of HTTP requests
- * 
- * @param {string} sceneID The ID of the scene being used
- * @param {string} uid The ID of the user who made the request
- * @param {Express.Response} res The response variable (used for common rejections) 
- * @param {Object} file A JSON object that holds the path of the temporary file (undefined by default) 
- * @param {boolean} checkFile Initializes file checks (file is valid, valid image, etc) (false by default)
- * 
- * @returns {Promise<number>} Returns a promise that holds the HTTP status code for any failures, 200 if OK
- */
-async function isValidRequest(sceneID, uid, res, file = undefined, checkFile = false){
-    //Check to make sure that a vaild file was recieved
-    let fileExists = (file && Object.keys(file) !== 0);
-    if(checkFile && (!fileExists|| !isImage(file))){
-        res.status(400).json({
-            message: (!fileExists ? "No Image sent" : "Invalid Image sent"),
-            error: "Bad Request"
-        });
-        return 400;
+        fs.writeFileSync(tmpFilePath, data, "base64");
+    }catch(err) {
+        throw "Error writing temporary image for validation";
     }
 
-    //User id supplied?
-    if(!uid){
-        res.status(401).json({
-            message: "Missing user ID",
-            error: "Unauthorized"
-        });
-        return 401;
-    }
-    let admin = await isAdmin(uid);
-    uid = await verifyGoogleToken(uid);
-    if(!uid && !admin){
-        res.status(401).json({
-            message: "Invalid authentication token",
-            error: "Unauthorized"
-        });
-        return 401;
+    let validImage = isImage(tmpFilePath);
+    fs.unlinkSync(tmpFilePath);
+    if(!validImage) {
+        throw "Invalid image received";
     }
     
-    //Find the scene
-    let response = 0;
-    let scene;
     try{
-        scene = await SceneSchema.findById(sceneID);
+        fs.writeFileSync(`${imgDest}/${id}.jpg`, data, "base64");
     }catch(err){
-        if(err.name === "CastError"){
-            response = 404;
-            res.status(response).json({
-                message: `Could not find scene ${sceneID}`,
-                error: "Scene not found"
-            });
-            return response;
-        }
-
-        res.status(500).json({
-            message: `Error fetching scene ${sceneID}`,
-            error: err
-        });
-        return 500;
-    }  
-
-    if(!scene){
-        response = 404;
-        return res.status(response).json({
-            message: `Could not find scene ${sceneID}`,
-            error: "Scene not found"
-        });
+        throw "Could not write image to final destination";
     }
-
-    if(scene.uid.toString() !== uid.toString() && !admin){
-        response = 401;
-        return res.status(response).json({
-            message: `You do not own scene ${sceneID}`,
-            error: "Unauthorized"
-        });
-    }
-    response = 200;
-        
-    return response;
 }
-
-/**
- * Cleans up in the case of an error with the request
- * @param {string} path The path of the file to be removed
- */
-function cleanup(path){
-    fs.unlinkSync(path);
-}
-
 
 /**
  * Processes the first 4 bytes of a file to determine if it is a vaild image
@@ -157,8 +77,7 @@ function cleanup(path){
  * @returns {boolean} Boolean on wheter the file is a valid image
  */
 function isImage(file){
-    let path = file.path;
-    let data = fs.readFileSync(path);
+    let data = fs.readFileSync(file);
 
     //Using 1st 4 bytes to determine MIME Type
     data = data.subarray(0, 4);
@@ -167,7 +86,6 @@ function isImage(file){
     switch(mime){
         case JPG[0]:
         case JPG[1]:
-            file.extension = "jpg";
             return true;
         default:
             return false;
@@ -177,11 +95,6 @@ function isImage(file){
 module.exports = {
     create: function(req, res){
         let id = req.params.id;
-        let uid = req.headers['x-access-token'];
-        let file = {
-            //Using id in combo with timestamp to prevent collisions
-            path: `${tmp}/${id}-${Date.now()}.jpg`
-        };
 
         if(req.body.data === undefined){
             return res.status(400).json({
@@ -190,86 +103,45 @@ module.exports = {
             });
         }
         
-        if(!createImage(req.body.data, file.path)){
-            return res.status(500).json({
-                error: "Internal Error",
-                message: "Error decoding base64 string"
+        try {
+            createImage(req.body.data, id);
+        }catch(err) {
+            return resp.status(500).json({
+                message: "Error creating image",
+                error: err
             });
         }
-
-        return isValidRequest(id, uid, res, file, true).then((reason) => {
-            if(reason === 200){
-                //Check to make sure a file does not already exist
-                if(fs.existsSync(`${imgDest}/${id}.jpg`)){
-                    res.status(409).json({
-                        message: `Scene ${id} already has a preview image, use PUT to update it`,
-                        error: "Conflict"
-                    });
-                    cleanup(file.path);
-                    return;
-                }
-                if(createImage(req.body.data, `${imgDest}/${id}.jpg`)) {
-                    res.status(201).json({
-                        message: "Created"
-                    });
-                }
-                cleanup(file.path);
-            }else if(file){
-                cleanup(file.path);
-            }
-            return;
+        
+        return res.status(201).json({
+            message: "Created"
         });
     },
 
     delete: async function (req, resp){
         let id = req.params.id;
-        let uid = req.headers['x-access-token'];
-        
-        let result = await isValidRequest(id, uid, resp);
-        if(result === 200){
-            if(deleteImage(id) === true){
-                return resp.status(204).send();
-            }
-            return resp.status(404).json({
-                message: `Could not find an image for scene ${id}`,
-                error: "Not found"
-            });
+    
+        if(deleteImage(id)){
+            return resp.status(204).send();
         }
+        return resp.status(404).json({
+            message: `Could not find an image for scene ${id}`,
+            error: "Not found"
+        });
     },
 
     update: function(req, resp){
         let id = req.params.id;
-        let uid = req.headers['x-access-token'];
-        let file = {
-            path: `${tmp}/$${id}-${Date.now()}.jpg`
-        };
 
-        if(!createImage(req.body.data, file.path)){
+        try {
+            createImage(req.body.data, id);
+        }catch(err) {
             return res.status(500).json({
-                error: "Internal Error",
-                message: "Error decoding base64 string"
+                message: "Error updating image",
+                error: err
             });
         }
 
-        isValidRequest(id, uid, resp, file, true).then((result) => {
-            if(result === 200){
-                if(!fs.existsSync(`${imgDest}/${id}.jpg`)){
-                    resp.status(404).json({
-                        message: `Scene ${id} does not have a preview, use POST to create one`,
-                        error: "Preview not found"                        
-                    });
-                    cleanup(file.path);
-                    return;
-                }
-                if(createImage(req.body.data, `${imgDest}/${id}.jpg`)) {
-                    resp.status(204).send();
-                }
-                cleanup(file.path);
-            }else if(file){
-                cleanup(file.path);
-            }
-            return;
-        });
+        return resp.status(204).send();
     },
 
     getByID: function(req, res){
@@ -291,7 +163,65 @@ module.exports = {
             return res.status(200).sendFile(`${imgDest}/${id}.jpg`, {root: root});
         });
     },
-    
+    requireAuth: async function(req, res, next) {
+        if(!req.headers["x-access-token"]) {
+            return res.status(400).json({
+                message: "Did not receive auth token",
+                error: "Bad Request"
+            });
+        }
+        res.uid = await verifyGoogleToken(req.headers["x-access-token"]);
+        res.admin = await isAdmin(req.headers["x-access-token"]);
+
+        if(!res.uid && !res.admin) {
+            return res.status(400).json({
+                message: "Invalid auth token received",
+                error: "Unauthorized"
+            });
+        }
+
+        next();
+    },
+    ownScene: async function(req, res, next) {
+        const sceneId = req.params.id;
+        let scene;
+        try {
+            scene = await SceneSchema.findById(sceneId);
+        }catch(err) {
+            return res.status(500).json({
+                message: "Error retrieving scenes",
+                error: err
+            });
+        }
+
+        if(!scene) {
+            return res.status(404).json({
+                message: "Scene does not exist",
+                error: "Not found"
+            });
+        }
+
+        if(scene.uid.toString() !== res.uid.toString()) {
+            return res.status(401).json({
+                message: "You do not have permission to do that",
+                error: "Unauthorized"
+            });
+        }
+        next();
+    },
+    imageDoesNotExist: async function(req, res, next) {
+        const sceneId = req.params.id;
+
+        if(fs.existsSync(`${imgDest}/${sceneId}.jpg`)) {
+            return res.status(409).json({
+                message: "The image already exists, use a PUT request",
+                error: "Conflict"
+            });
+        }
+
+        next();
+    },
     deleteImage: deleteImage,
-    destFolder: imgDest
+    destFolder: imgDest,
+    createImage: createImage
 };

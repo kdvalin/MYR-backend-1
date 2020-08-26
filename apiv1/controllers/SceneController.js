@@ -1,5 +1,5 @@
 let { verifyGoogleToken, isAdmin } = require('../authorization/verifyAuth.js');
-const { deleteImage, destFolder } = require('./ImageController');
+const { deleteImage, destFolder, createImage } = require('./ImageController');
 let SceneSchema = require('../models/SceneModel');
 
 const ObjectId = require('mongoose').Types.ObjectId;
@@ -407,5 +407,49 @@ module.exports = {
         });
 
         return resp.status(200).set('Content-Disposition', respHeaders['Content-Disposition']).json(output);
+    },
+    import: async function(req, resp) {
+        let body = req.body;
+        if(!req.uid) {
+            return resp.status(501).json({
+                message: "An admin cannot import a scene at this time",
+                error: "Not Impelmented"
+            });
+        }
+        
+        let imported = 0;
+        let errs = {
+            
+        };
+
+        try {
+            for(const scene of body) {
+                //Remove foriegn keys from the scene
+                delete scene._id;
+                delete scene.settings.collectionID;
+                
+                if(scene.name && scene.code && scene.settings && scene.image) {
+                    let newScene = buildScene(scene, scene.settings);
+                    newScene.uid = ObjectId(req.uid);
+                    try {
+                        let dbScene = await SceneSchema.create(newScene);
+                        createImage(scene.image, dbScene._id);
+                        ++imported;
+                    }catch(err) {
+                        errs.get = err;
+                    }
+                }
+            }
+        }catch(err) {
+            return resp.status(400).json({
+                message: "Error parsing body",
+                error: "Bad Request"
+            });
+        }
+        
+        return resp.status(200).json({
+            totalImported: imported,
+            errors: errs
+        });
     }
 };
