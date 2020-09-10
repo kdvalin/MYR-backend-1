@@ -56,14 +56,9 @@ module.exports = {
         if(Object.keys(body).length === 0 || !req.headers['x-access-token']){ //Check if a body was supplied
             return res.status(400).send("Bad Request");
         }
-        
-        let uid = await verifyGoogleToken(req.headers['x-access-token']);
-        if(!uid){
-            return res.status(401).json(invalid_token);
-        }
 
         let newScene = buildScene(body, body.settings);
-        newScene.uid = uid;
+        newScene.uid = req.uid;
         try{
             await newScene.save();
         }catch(err){

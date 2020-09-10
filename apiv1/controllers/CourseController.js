@@ -73,23 +73,26 @@ module.exports = {
     /**
      * CourseController.show()
      */
-    show: function (req, res) {
+    show: async function (req, res) {
         let id = req.params.id;
         let getLesson = req.query.getLesson ? req.query.getLesson : false;
-        CourseModel.findOne({ _id: id }, function (err, Course) {
-            if (err) {
-                return res.status(500).json({
-                    message: 'Error when getting Course.',
-                    error: err
-                });
-            }
-            if (!Course) {
-                return res.status(404).json({
-                    message: 'No such Course'
-                });
-            }
-            return res.json(Course);
-        });
+        
+        let course;
+        try {
+            course = await CourseModel.findOne({ _id: id });
+        }catch(err){
+            return res.status(500).json({
+                message: 'Error when getting Course.',
+                error: err
+            });
+        }
+
+        if (!course) {
+            return res.status(404).json({
+                message: 'No such Course'
+            });
+        }
+        return res.json(course);
     },
 
     /**

@@ -1,9 +1,10 @@
 let express = require('express');
 let router = express.Router();
 let SceneController = require('../controllers/SceneController.js');
+let auth = require('../authorization/verifyAuth');
 
 router.get("/", SceneController.list);
-router.post("/", SceneController.create);
+router.post("/", auth.requireLogin, SceneController.create);
 
 router.get("/example", SceneController.getExamples);
 router.post("/example", SceneController.promoteScene);
