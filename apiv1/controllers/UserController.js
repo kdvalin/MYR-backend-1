@@ -105,28 +105,24 @@ module.exports = {
     /**
  * UserController.show_profile()
  */
-    show_profile: function (req, res) {
-        let token = req.headers['x-access-token'];
-        if (!token) {
-            return res.status(401).send({ auth: false, message: 'No token provided.' });
+    show_profile: async function (req, res) {
+        if(!req.admin) {
+            return res.status(401).json({
+                message: "You are not authorized to view this resource",
+                error: "Unauthorized"
+            });
+        }
+        let user;
+        try {
+            user = await UserModel.findById(req.admin, { password: 0 });
+        }catch(err){
+            return res.status(500).send("There was a problem finding the user.");
         }
 
-        //res.status(999).send();
-        jwt.verify(token, config.secret, function (err, decoded) {
-            if (err) {
-                return res.status(500).send({ auth: false, message: 'Failed to authenticate token.' });
-            }
-
-            UserModel.findById(decoded.id, { password: 0 }, function (err, user) {
-                if (err) {
-                    return res.status(500).send("There was a problem finding the user.");
-                }
-                if (!user) {
-                    return res.status(404).send("No user found.");
-                }
-                res.status(200).send(user);
-            });
-        });
+        if (!user) {
+            return res.status(404).send("No user found.");
+        }
+        return res.status(200).json(user);
     },
 
     /**

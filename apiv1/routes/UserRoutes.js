@@ -24,7 +24,7 @@ router.get('/logout', UserController.logout);
 /*
  * GET
  */
-router.get('/profile', secureAPILimiter, UserController.show_profile);
+router.get('/profile', secureAPILimiter, auth.requireAdmin, UserController.show_profile);
 
 /*
  * GET
