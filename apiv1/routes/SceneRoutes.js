@@ -1,7 +1,7 @@
 let express = require('express');
 let router = express.Router();
 let SceneController = require('../controllers/SceneController.js');
-let auth = require('../authorization/verifyAuth');
+let auth = require('../middleware/authorization');
 
 router.get("/", SceneController.list);
 router.post("/", auth.requireLogin, SceneController.create);

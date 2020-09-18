@@ -78,9 +78,8 @@ module.exports = {
     },
     create: async function(req, resp){
         let body = req.body;
-        let isAdmin = await verifyAuth.isAdmin(req.headers['x-access-token']);
-
-        if(!isAdmin){
+        
+        if(!req.admin){
             return resp.status(401).json(unauthorized);
         }
 

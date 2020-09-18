@@ -9,13 +9,6 @@ let GoogleLoginModel = require("../models/GoogleLoginModel");
 const CLIENTID = process.env.GOOGLE_OAUTH2_CLIENTID;
 const client = new OAuth2Client(CLIENTID);
 
-const TOKEN_HEADER = 'x-access-token';
-// let sync = require('synchronize');
-// let fiber = sync.fiber;
-// let await = sync.await;
-// let defer = sync.defer;
-
-
 async function verifyGoogleToken(token) {
     let ticket = await client.verifyIdToken({
         idToken: token,
@@ -81,50 +74,6 @@ async function isAdmin(token) {
 }
 
 module.exports = {
-    requireLogin: async function (req, res, next) {
-        let token = req.headers[TOKEN_HEADER];
-
-        if(!token) {
-            return res.status(400).json({
-                message: "No token supplied",
-                error: "Bad Request"
-            });
-        }
-        
-        let user = await verifyGoogleToken(token);
-
-        if(!user) {
-            return res.status(401).json({
-                message: "Invalid token received",
-                error: "Unauthorized"
-            });
-        }
-
-        req.uid = user;
-        next();
-    },
-    requireAdmin: async function(req, res, next) {
-        let token = req.headers[TOKEN_HEADER];
-
-        if(!token) {
-            return res.status(400).json({
-                message: "No token supplied",
-                error: "Bad Request"
-            });
-        }
-
-        let admin = await isAdmin(token);
-
-        if(!admin) {
-            return res.status(401).json({
-                message: "Invalid admin token received",
-                error: "Unauthorized"
-            });
-        }
-
-        req.admin = admin;
-        next();
-    },
     verifyGoogleToken: verifyGoogleToken,
     isAdmin: isAdmin
 };
