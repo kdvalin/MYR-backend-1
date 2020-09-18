@@ -29,7 +29,7 @@ router.get('/profile', secureAPILimiter, UserController.show_profile);
 /*
  * GET
  */
-router.get('/id/:id', secureAPILimiter, UserController.show);
+router.get('/id/:id', secureAPILimiter, auth.requireAdmin, UserController.show);
 
 /*
  * POST

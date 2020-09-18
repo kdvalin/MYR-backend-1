@@ -78,32 +78,28 @@ module.exports = {
     /**
      * UserController.show()
      */
-    show: function (req, res) {
-        let token = req.headers['x-access-token'];
+    show: async function (req, res) {
+        if (!req.admin) {
+            res.status(401).send('Error 401: Not authorized');
+        }
+        let id = req.params.id;
+        let user;
 
-        verify.isAdmin(token).then(function (answer) {
-            if (!answer) {
-                res.status(401).send('Error 401: Not authorized');
-            }
-            else {
-                let id = req.params.id;
-                UserModel.findOne({ _id: id }, function (err, User) {
-                    if (err) {
-                        return res.status(500).json({
-                            message: 'Error when getting User.',
-                            error: err
-                        });
-                    }
-                    if (!User) {
-                        return res.status(404).json({
-                            message: 'No such User'
-                        });
-                    }
-                    return res.json(User);
-                });
-            }
-        });
+        try{
+            user = await UserModel.findOne({ _id: id });
+        }catch(err) {
+            return res.status(500).json({
+                message: 'Error when getting User.',
+                error: err
+            });
+        }
 
+        if (!user) {
+            return res.status(404).json({
+                message: 'No such User'
+            });
+        }
+        return res.json(User);
     },
 
     /**
