@@ -2,6 +2,7 @@ let express = require('express');
 let router = express.Router();
 let UserController = require('../controllers/UserController.js');
 
+const auth = require('../middleware/authorization');
 const rateLimit = require("express-rate-limit");
 
 const secureAPILimiter = rateLimit({
@@ -13,7 +14,7 @@ const secureAPILimiter = rateLimit({
 /*
  * GET
  */
-router.get('/', secureAPILimiter, UserController.list);
+router.get('/', secureAPILimiter, auth.requireAdmin, UserController.list);
 
 /*
  * GET

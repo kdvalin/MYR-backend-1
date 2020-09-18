@@ -22,9 +22,7 @@ module.exports = {
     /**
      * UserController.list()
      */
-    list: function (req, res) {
-        let token = req.headers['x-access-token'];
-
+    list: async function (req, res) {
         let filter;
         // let sort;
         let range;
@@ -57,29 +55,24 @@ module.exports = {
         docConditions = { ...pageRange };
         let queryParams = { ...filter };
 
-        verify.isAdmin(token).then(function (answer) {
-            if (!answer) {
-                res.status(401).send('Error 401: Not authorized');
-            }
-            else {
-                UserModel.find(queryParams, {}, docConditions, function (err, Users) {
-                    if (err) {
-                        return res.status(500).json({
-                            message: 'Error when getting User.',
-                            error: err
-                        });
-                    }
-                    UserModel.countDocuments(queryParams).exec(function (err, count) {
-                        if (err) {
-                            return next(err);
-                        }
-                        res.set('Total-Documents', count);
-                        return res.json(Users);
-                    });
-                });
-            }
-        });
-
+        if (!req.admin) {
+            return res.status(401).send('Error 401: Not authorized');
+        }
+        
+        let users, count;
+        try {
+            users = await UserModel.find(queryParams, {}, docConditions);
+            count = await UserModel.countDocuments(queryParams);
+        }
+        catch(err) {
+            return res.status(500).json({
+                message: 'Error when getting User.',
+                error: err
+            });
+        }
+                
+        res.set('Total-Documents', count);
+        return res.json(users);
     },
 
     /**
