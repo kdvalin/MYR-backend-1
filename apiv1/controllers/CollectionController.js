@@ -3,15 +3,6 @@ let SceneSchema = require("../models/SceneModel");
 let {verifyGoogleToken, isAdmin} = require('../authorization/verifyAuth.js');
 const ObjectId = require('mongoose').Types.ObjectId;
 
-const noToken = {
-    message: "No token was received",
-    error: "Bad Request"
-};
-const badToken = {
-    message: "An invalid token was received",
-    error: "Unauthorized"
-};
-
 function createFilter(params){
     let filter = {};
 
