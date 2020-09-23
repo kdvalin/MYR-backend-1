@@ -32,15 +32,6 @@ function createFilter(params){
 
 module.exports = {
     list: async function(req, resp) {
-        if(!req.headers["x-access-token"]){
-            return resp.status(400).json(noToken);
-        }
-        let uid = await verifyGoogleToken(req.headers["x-access-token"]);
-        let admin = await isAdmin(req.headers["x-access-token"]);
-
-        if(!uid && !admin){
-            return resp.status(401).json(badToken);
-        }
         let filter = {};
         if(req.query.filter){
             filter = createFilter(JSON.parse(`${req.query.filter}`));
@@ -53,11 +44,11 @@ module.exports = {
 
         let collections;
         try{
-            if(admin){
+            if(req.admin){
                 collections = await CollectSchema.find(filter).skip(range[1]*(range[0]-1)).limit(range[1]);
                 resp.set('Total-Documents', await CollectSchema.countDocuments(filter));
             }else{
-                collections = await CollectSchema.find({uid: uid});
+                collections = await CollectSchema.find({uid: req.uid});
             }
         }catch(err){
             return resp.status(500).json({
@@ -72,20 +63,13 @@ module.exports = {
     },
 
     create: async function(req, resp) {
-        if(!req.headers["x-access-token"]){
-            return resp.status(400).json(noToken);
-        }else if(!req.body.collectID){
+        if(!req.body.collectID){
             return resp.status(400).json({
                 message: "Did not receive field \"collectID\"",
                 error: "Bad Request"
             });
         }
         let collectID = req.body.collectID;
-        let uid = await verifyGoogleToken(req.headers["x-access-token"]);
-
-        if(!uid){
-            return resp.status(401).json(badToken);
-        }
 
         let collections = [];
         try{
@@ -107,7 +91,7 @@ module.exports = {
         try{
             result = await CollectSchema.create({
                 collectionID: collectID,
-                uid: uid,
+                uid: req.uid,
                 timestamp: Date.now()
             });
         }catch(err){
@@ -121,17 +105,7 @@ module.exports = {
     },
 
     show: async function(req, resp) {
-        if(!req.headers["x-access-token"]){
-            return resp.status(400).json(noToken);
-        }
-
         let collectionID = req.params.collectionName;
-        let uid = await verifyGoogleToken(req.headers["x-access-token"]);
-        let admin = await isAdmin(req.headers["x-access-token"]);
-
-        if(!uid && !admin){
-            return resp.status(401).json(badToken);
-        }
 
         let collection;
         try{
@@ -150,7 +124,7 @@ module.exports = {
             });
         }
         
-        if(collection.uid.toString() !== uid.toString() && !admin){
+        if(collection.uid.toString() !== req.uid.toString() && !req.admin){
             return resp.status(401).json({
                 message: `You do not own "${collectionID}"`,
                 error: "Unauthorized"
@@ -170,16 +144,7 @@ module.exports = {
     },
 
     delete: async function(req, resp){
-        if(!req.headers["x-access-token"]){
-            return resp.status(400).json(noToken);
-        }
-
         let collectionID = req.params.collectionName;
-        let uid = await verifyGoogleToken(req.headers["x-access-token"]);
-
-        if(!uid){
-            return resp.status(401).json(noToken);
-        }
 
         let collection;
         try{
@@ -197,7 +162,7 @@ module.exports = {
                 error: "Not Found"
             });
         }
-        if(collection.uid.toString() !== uid.toString()){
+        if(collection.uid.toString() !== req.uid.toString()){
             return resp.status(401).json({
                 message: `You do not own ${collectionID}`,
                 error: "Unauthorized"
@@ -221,18 +186,9 @@ module.exports = {
     },
     
     getByID: async function(req, resp){
-        if(!req.headers["x-access-token"]){
-            return resp.status(400).json(noToken);
-        }
-
         let id = req.params.id;
-        let admin = await isAdmin(req.headers["x-access-token"]);
-
-        if(!admin){
-            return resp.status(401).json(badToken);
-        }
-
         let collection;
+
         try{
             collection = await CollectSchema.findById(id);
         }catch(err){
