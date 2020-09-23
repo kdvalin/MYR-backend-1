@@ -1,6 +1,5 @@
 let CollectSchema = require("../models/CollectionModel");
 let SceneSchema = require("../models/SceneModel");
-let {verifyGoogleToken, isAdmin} = require('../authorization/verifyAuth.js');
 const ObjectId = require('mongoose').Types.ObjectId;
 
 function createFilter(params){
