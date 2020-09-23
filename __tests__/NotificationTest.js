@@ -53,8 +53,8 @@ let token = {
 };
 
 describe('Posting Notifications', () => {
-    test('Without an admin token, response should be 401', () => {
-        return request(app).post(notifEndpoint).send(minNotif).expect(401);
+    test('Without an admin token, response should be 400', () => {
+        return request(app).post(notifEndpoint).send(minNotif).expect(400);
     });
     test('Without a proper body, it should return 400', () => {
         return request(app).post("/apiv1/users/login").send({

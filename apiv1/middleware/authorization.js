@@ -48,18 +48,16 @@ module.exports = {
     },
     requireAdminOrLogin: async function(req, res, next) {
         let token = req.headers[TOKEN_HEADER];
-
         if(!token) {
             return res.status(400).json(errors.noToken);
         }
 
         let admin = await isAdmin(token);
         let user = await verifyGoogleToken(token);
-
+        
         if(!admin && !user) {
             return res.status(401).json(errors.invalidToken);
         }
-
         req.admin = admin;
         req.uid = user;
 

@@ -89,9 +89,9 @@ const test_scenes = [
     }
 ];
 
-describe("Try to fetch lessons", () =>{
-    test("Without a user id, it should return with a 401 Unauthorized", () =>{
-        return request(app).get('/apiv1/scenes').expect(401);
+describe("Try to fetch Scenes", () =>{
+    test("Without a user id, it should return with a 400 Bad Request", () =>{
+        return request(app).get('/apiv1/scenes').expect(400);
     });
    
     test("With an invalid user id, it should return 204 No Content", () => {

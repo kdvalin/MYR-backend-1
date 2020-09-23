@@ -19,40 +19,42 @@ const errors = {
     }
 };
 
-/**
- * Checks to see if the user owns the scene
- * 
- * If req.user is not set, 401 will be sent.
- * If req.params.id is not set, a 400 will be sent
- * 
- * @param {Express.Request} req The HTTP request from Express, this REQUIRES a id parameter in a path
- * @param {Express.Response} res The HTTP response from Express
- * @param {function} next The next function to call in the callback chain in express
- */
-async function ownScene(req, res, next) {
-    if(!req.uid) {
-        return res.status(401).json(errors.noLogin);
-    }
 
-    if(!req.params.id) {
-        return res.status(400).json(errors.noSceneId);
-    }
+module.exports = {
+    /**
+     * Checks to see if the user owns the scene
+     * 
+     * If req.user is not set, 401 will be sent.
+     * If req.params.id is not set, a 400 will be sent
+     * 
+     * @param {Express.Request} req The HTTP request from Express, this REQUIRES a id parameter in a path
+     * @param {Express.Response} res The HTTP response from Express
+     * @param {function} next The next function to call in the callback chain in express
+     */
+    ownScene: async function(req, res, next) {
+        if(!req.uid && !req.admin) {
+            return res.status(401).json(errors.noLogin);
+        }
 
-    let scene;
-    try{
-        scene = await SceneSchema.findById(req.params.id);
-    }catch(err) {
-        return res.status(500).json({
-            message: "Error getting scene from database",
-            error: err
-        });
-    }
-    if(!scene) {
-        return res.status(404).json(errors.notFound);
-    }
-    if(scene.uid.toString() !== req.uid) {
-        return res.status(401).json(errors.noOwnership);
-    }
+        if(!req.params.id) {
+            return res.status(400).json(errors.noSceneId);
+        }
 
-    next();
+        let scene;
+        try{
+            scene = await SceneSchema.findById(req.params.id);
+        }catch(err) {
+            return res.status(500).json({
+                message: "Error getting scene from database",
+                error: err
+            });
+        }
+        if(!scene) {
+            return res.status(404).json(errors.notFound);
+        }
+        if(!req.admin && scene.uid.toString() !== req.uid.toString()) {
+            return res.status(401).json(errors.noOwnership);
+        }
+        next();
+    }
 }

@@ -1,14 +1,8 @@
-let { verifyGoogleToken, isAdmin } = require('../authorization/verifyAuth.js');
 const { deleteImage, destFolder } = require('./ImageController');
 let SceneSchema = require('../models/SceneModel');
 
 const ObjectId = require('mongoose').Types.ObjectId;
 const fs = require('fs');
-
-const invalid_token = {
-    message: "Invalid token received",
-    error: "Unauthorized"
-};
 
 function createFilter(params){
     let filter = {};
@@ -53,7 +47,7 @@ function buildScene(body, settings, dest = undefined){
 module.exports = {
     create: async function(req, res){
         let body = req.body;
-        if(Object.keys(body).length === 0 || !req.headers['x-access-token']){ //Check if a body was supplied
+        if(Object.keys(body).length === 0){ //Check if a body was supplied
             return res.status(400).send("Bad Request");
         }
 
@@ -72,13 +66,6 @@ module.exports = {
     },
 
     list: async function(req, resp){
-        if(!req.headers['x-access-token']){
-            return resp.status(401).json({
-                message: "No userID supplied",
-                error: "Unauthorized"
-            });
-        }
-
         let filter;
         let range = [0, 0];
 
@@ -89,26 +76,17 @@ module.exports = {
             range = JSON.parse(`${req.query.range}`);
         }
         dbFilter = createFilter(filter);
-
-        let uid = req.headers['x-access-token'];
-        let admin = await isAdmin(req.headers["x-access-token"]);
-        if(uid !== "1"){
-            uid = await verifyGoogleToken(req.headers['x-access-token']);
-
-            if(!uid && !admin){
-                return resp.status(401).json(invalid_token);
-            }
-        }
         
         let scenes;
         try{
-            if(admin){
+            if(req.admin){
                 scenes = await SceneSchema.find(dbFilter).skip(range[1] * (range[0]-1)).limit(range[1]);
                 resp.set('Total-Documents', await SceneSchema.countDocuments(dbFilter));
             }else{
-                scenes = await SceneSchema.find({uid: uid});
+                scenes = await SceneSchema.find({uid: req.uid});
             }
         }catch(err){
+            console.log(err);
             return resp.status(500).json({
                 message: "Error finding scenes",
                 error: err
@@ -119,48 +97,6 @@ module.exports = {
 
     delete: async function (req, resp){
         let id = req.params.id;
-
-        if(!req.headers['x-access-token']){
-            return resp.status(400).json({
-                message: "Missing user ID",
-                error: "Bad Request"
-            });
-        }
-
-        let uid = await verifyGoogleToken(req.headers['x-access-token']);
-        let admin = await isAdmin(req.headers['x-access-token']);
-
-        if(!admin && !uid){
-            return resp.status(401).json({
-                message: "Invalid token recieved",
-                error: "Unauthorized"
-            });
-        }
-
-        //Check to make sure that the scene exists
-        let scene;
-        try {
-            scene = await SceneSchema.findById(id);
-         }catch(err){
-            return resp.status(500).json({
-                message: "Error deleting Scene",
-                error: err
-            });
-        }
-        if(!scene){
-            return resp.status(404).json({
-                message: `Could not find scene id "${id}"`,
-                error: "Scene Not Found"
-            });
-        }
-
-        //Verify ownership of the scene before deleting it
-        if(scene.uid.toString() !== uid.toString() && !admin){
-            return resp.status(401).json({
-                message: `You do not own scene "${id}"`,
-                error: "Unauthorized"
-            });
-        }
         
         let result = deleteImage(id);
         if(result !== true && result.errorCode === 500) {
@@ -182,28 +118,12 @@ module.exports = {
         let id = req.params.id;
         let body = req.body;
 
-        if(!req.headers['x-access-token']){
-            return resp.status(400).json({
-                message: "Missing user ID",
-                error: "Bad Request"
-            });
-        }
-
         if(Object.keys(body) === 0 || body.settings === undefined){
             return resp.status(400).json({
                 message: "Missing required fields",
                 error: (Object.keys(body) == 0 ? "No body provided" : "No settings provided")
             });
         }
-        
-        let uid = await verifyGoogleToken(req.headers['x-access-token']);
-        if(!uid){
-            return resp.status(401).json({
-                message: "Invalid token recieved",
-                error: "Unauthorized"
-            });
-        }
-
         let scene;
         try{
             scene = await SceneSchema.findById(id);
@@ -212,15 +132,14 @@ module.exports = {
                 message: "Error getting scene",
                 error: err
             });
-        }
-        
+        }        
         if(!scene){
             return resp.status(404).json({
                 message: `Could not find scene "${id}"`,
                 error: "Scene not found"
             });
         }
-        else if(scene.uid.toString() !== uid.toString()){
+        else if(scene.uid.toString() !== req.uid.toString()){
             return resp.status(401).json({
                 message: `You do not own scene "${id}"`,
                 error: "Unauthorized"
@@ -292,15 +211,6 @@ module.exports = {
     },
     
     promoteScene: async function(req, resp) {
-        let admin = await isAdmin(req.headers['x-access-token']);
-
-        if(!admin){
-            return resp.status(401).json({
-                message: "You are not authorized to do this",
-                error: "Unauthorized"
-            });
-        }
-
         let scene;
         try {
             scene = await SceneSchema.findById(ObjectId(req.body.id));
