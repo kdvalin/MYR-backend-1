@@ -128,59 +128,52 @@ module.exports = {
     /**
      * UserController.create()
      */
-    create: function (req, res) {
-        let token = req.headers['x-access-token'];
+    create: async function (req, res) {
+        if (!req.admin) {
+            return res.status(401).send('Error 401: Not authorized');
+        }
+        
+        let hashedPassword = bcrypt.hashSync(req.body.password, 8);
+        let today = new Date();
 
-        verify.isAdmin(token).then(function (answer) {
-            if (!answer) {
-                res.status(401).send('Error 401: Not authorized');
-            }
-            else {
-                let hashedPassword = bcrypt.hashSync(req.body.password, 8);
-                let today = new Date();
-
-                let newUser = new UserModel({
-                    name: req.body.name,
-                    email: req.body.email,
-                    password: hashedPassword,
-                    user_created: today,
-                    last_login: today,
-                    subscribed: req.body.subscribed ? req.body.subscribed : false,
-                    admin: req.body.admin ? req.body.admin : false
-                });
-
-                newUser.email = newUser.email.toLowerCase();    //all emails should be stored in lowercase
-
-                UserModel.findOne({ email: req.body.email.toLowerCase() }, function (err, User) {
-                    if (err) {
-                        return res.status(500).json({
-                            message: 'Error when creating user.',
-                            error: err
-                        });
-                    }
-                    if (User != null) {
-                        return res.status(409).json({
-                            message: 'A user with this email already exists',
-                        });
-                    }
-                    else {
-                        User = newUser;
-                        User.save(function (err, User) {
-                            if (err) {
-                                return res.status(500).json({
-                                    message: 'Error when creating User',
-                                    error: err
-                                });
-                            }
-                            let token = jwt.sign({ id: User._id }, config.secret, {
-                                expiresIn: 86400 // expires in 24 hours
-                            });
-                            return res.status(201).send({ auth: true, token: token });
-                        });
-                    }
-                });
-            }
+        let newUser = new UserModel({
+            name: req.body.name,
+            email: req.body.email.toLowerCase(), //all emails should be stored in lowercase
+            password: hashedPassword,
+            user_created: today,
+            last_login: today,
+            subscribed: req.body.subscribed ? req.body.subscribed : false,
+            admin: req.body.admin ? req.body.admin : false
         });
+
+        let user;
+        try {
+            user = await UserModel.findOne({ email: req.body.email.toLowerCase() });
+        }catch(err) {
+            return res.status(500).json({
+                message: 'Error when creating user',
+                error: err
+            });
+        }
+        if (user) {
+            return res.status(409).json({
+                message: 'A user with this email already exists',
+            });
+        }
+
+        try {
+            user = await newUser.save();
+        }catch(err) {
+            return res.status(500).json({
+                message: 'Error when creating User',
+                error: err
+            });
+        }
+
+        let token = jwt.sign({ id: user._id }, config.secret, {
+            expiresIn: 86400 // expires in 24 hours
+        });
+        return res.status(201).send({ auth: true, token: token });
     },
 
     /**

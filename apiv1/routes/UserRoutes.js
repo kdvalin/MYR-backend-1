@@ -34,7 +34,7 @@ router.get('/id/:id', secureAPILimiter, auth.requireAdmin, UserController.show);
 /*
  * POST
  */
-router.post('/', secureAPILimiter, UserController.create);
+router.post('/', secureAPILimiter, auth.requireAdmin, UserController.create);
 
 /*
  * POST
