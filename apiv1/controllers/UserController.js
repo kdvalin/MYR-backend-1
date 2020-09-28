@@ -268,26 +268,20 @@ module.exports = {
     /**
      * UserController.remove()
      */
-    remove: function (req, res) {
-        let token = req.headers['x-access-token'];
+    remove: async function (req, res) {
+        if(!req.admin) {
+            return res.status(401).send('Error 401: Not authorized');
+        }
+        let id = req.params.id;
+        try{
+            await UserModel.findByIdAndRemove(id);
+        }catch(err) {
+            return res.status(500).json({
+                message: 'Error when deleting the User.',
+                error: err
+            });
+        }
 
-        verify.isAdmin(token).then(function (answer) {
-            if (!answer) {
-                res.status(401).send('Error 401: Not authorized');
-            }
-            else {
-                let id = req.params.id;
-                UserModel.findByIdAndRemove(id, function (err, User) {
-                    if (err) {
-                        return res.status(500).json({
-                            message: 'Error when deleting the User.',
-                            error: err
-                        });
-                    }
-                    return res.status(204).json(User);
-                });
-            }
-        });
-
+        return res.status(204).send('');
     }
 };
