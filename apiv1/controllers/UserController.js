@@ -179,32 +179,38 @@ module.exports = {
     /**
      * UserController.login()
      */
-    login: function (req, res) {
-        UserModel.findOne({ email: req.body.email.toLowerCase() }, function (err, User) {
-            if (err) {
-                return res.status(500).send('Error on the server.');
-            }
-            if (!User) {
-                return res.status(401).send({ auth: false, token: null });
-            }
-            let passwordIsValid = bcrypt.compareSync(req.body.password, User.password);
-            if (!passwordIsValid) {
-                return res.status(401).send({ auth: false, token: null });
-            }
-            let token = jwt.sign({ id: User._id }, config.secret, {
-                expiresIn: 86400 // expires in 24 hours
+    login: async function (req, res) {
+        let user;
+
+        try{
+            user = await UserModel.findOne({email: req.body.email.toLowerCase()});
+        }catch(err) {
+            return res.status(500).json({
+                message: "Error fetching user",
+                error: err
             });
-            User.last_login = new Date();
-            User.save(function (err, User) {
-                if (err) {
-                    //return res.status(500).json({
-                    //    message: 'Error when updating user.',
-                    //    error: err
-                    //});
-                }
-            });
-            res.status(200).send({ auth: true, isAdmin: User.admin, token: token });
+        }
+        if (!user) {
+            return res.status(401).send({ auth: false, token: null });
+        }
+        let passwordIsValid = bcrypt.compareSync(req.body.password, user.password);
+
+        if (!passwordIsValid) {
+            return res.status(401).send({ auth: false, token: null });
+        }
+        let token = jwt.sign({ id: user._id }, config.secret, {
+            expiresIn: 86400 // expires in 24 hours
         });
+        user.last_login = new Date();
+        try {
+            await user.save();
+        }catch(err) {
+            return res.status(500).json({
+                message: 'Error when updating user.',
+                error: err
+            });
+        }
+        return res.status(200).send({ auth: true, isAdmin: user.admin, token: token });
     },
 
     /** 
