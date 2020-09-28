@@ -99,7 +99,7 @@ module.exports = {
                 message: 'No such User'
             });
         }
-        return res.json(User);
+        return res.json(user);
     },
 
     /**
@@ -223,50 +223,46 @@ module.exports = {
     /**
      * UserController.update()
      */
-    update: function (req, res) {
-        let token = req.headers['x-access-token'];
+    update: async function (req, res) {
+        if(!req.admin){
+            return res.status(401).send('Error 401: Not authorized');
+        }
 
-        verify.isAdmin(token).then(function (answer) {
-            if (!answer) {
-                res.status(401).send('Error 401: Not authorized');
-            }
-            else {
-                let id = req.params.id;
-                UserModel.findOne({ _id: id }, function (err, User) {
-                    if (err) {
-                        return res.status(500).json({
-                            message: 'Error when getting User',
-                            error: err
-                        });
-                    }
-                    if (!User) {
-                        return res.status(404).json({
-                            message: 'No such User'
-                        });
-                    }
+        let id = req.params.id;
+        let user;
+        
+        try{
+            user = await UserModel.findOne({ _id: id });
+        }catch(err){
+            return res.status(500).json({
+                message: 'Error when getting User',
+                error: err
+            });
+        }
+        if (!user) {
+            return res.status(404).json({
+                message: 'No such User'
+            });
+        }
 
-                    User.name = req.body.name ? req.body.name : User.name;
-                    User.email = req.body.email ? req.body.email.toLowerCase() : User.email;
-                    if (req.body.password != undefined && req.body.password != User.password) {
-                        User.password = req.body.password ? bcrypt.hashSync(req.body.password, 8) : User.password;
-                    }
-                    User.admin = req.body.admin != null ? req.body.admin : User.admin;
-                    User.subscribed = req.body.subscribed != null ? req.body.subscribed : User.subscribed;
+        user.name = req.body.name ? req.body.name : user.name;
+        user.email = req.body.email ? req.body.email.toLowerCase() : user.email;
+        if (req.body.password && !bcrypt.compareSync(req.body.password, user.password) ) {
+            user.password =  bcrypt.hashSync(req.body.password, 8);
+        }
+        user.admin = req.body.admin != null ? req.body.admin : user.admin;
+        user.subscribed = req.body.subscribed != null ? req.body.subscribed : user.subscribed;
 
-                    User.save(function (err, User) {
-                        if (err) {
-                            return res.status(500).json({
-                                message: 'Error when updating User.',
-                                error: err
-                            });
-                        }
+        try {
+            await user.save();
+        }catch(err) {
+            return res.status(500).json({
+                message: 'Error when updating User.',
+                error: err
+            });
+        }
 
-                        return res.json(User);
-                    });
-                });
-            }
-        });
-
+        return res.status(200).json(user);
     },
 
     /**

@@ -44,7 +44,7 @@ router.post('/login', secureAPILimiter, UserController.login);
 /*
  * PUT
  */
-router.put('/id/:id', secureAPILimiter, UserController.update);
+router.put('/id/:id', secureAPILimiter, auth.requireAdmin, UserController.update);
 
 /*
  * DELETE
