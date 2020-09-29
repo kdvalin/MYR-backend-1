@@ -120,7 +120,7 @@ describe('Test "TEST: Course 2" get path by shortname', () => {
 });
 
 describe('Test course creation without token', () => {
-    test('It should respond with HTTP status 401', () => {
+    test('It should respond with HTTP status 400', () => {
         return request(app)
             .post('/apiv1/courses/')
             .send({
@@ -130,12 +130,12 @@ describe('Test course creation without token', () => {
                 difficulty: 7,
                 lessons: ['5c099fda9396882a9d165a75', '5c099ff19396882a9d165a76', '5c09a0049396882a9d165a77']
             })
-            .expect(401);
+            .expect(400);
     });
 });
 
 describe('Test course editing without token', () => {
-    test('It should respond with HTTP status 401', () => {
+    test('It should respond with HTTP status 400', () => {
         return request(app)
             .put('/apiv1/courses/id/5c09a0409396882a9d165a7a')
             .send({
@@ -143,6 +143,6 @@ describe('Test course editing without token', () => {
                 description: 'TEST: This really should fail.',
                 difficulty: 7
             })
-            .expect(401);
+            .expect(400);
     });
 });

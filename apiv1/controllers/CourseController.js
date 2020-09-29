@@ -129,37 +129,29 @@ module.exports = {
             description: req.body.description,
             lessons: req.body.lessons
         });
-        let token = req.headers['x-access-token'];
 
-        verify.isAdmin(token).then(function (answer) {
-            if (!answer) {
-                res.status(401).send('Error 401: Not authorized');
+        CourseModel.findOne({ shortname: req.body.shortname }, function (err, Course) {
+            if (err) {
+                return res.status(500).json({
+                    message: 'Error when creating course.',
+                    error: err
+                });
+            }
+            if (Course != null) {
+                return res.status(409).json({
+                    message: 'A course with this shortname already exists',
+                });
             }
             else {
-                CourseModel.findOne({ shortname: req.body.shortname }, function (err, Course) {
+                Course = newCourse;
+                Course.save(function (err, Course) {
                     if (err) {
                         return res.status(500).json({
-                            message: 'Error when creating course.',
+                            message: 'Error when creating course',
                             error: err
                         });
                     }
-                    if (Course != null) {
-                        return res.status(409).json({
-                            message: 'A course with this shortname already exists',
-                        });
-                    }
-                    else {
-                        Course = newCourse;
-                        Course.save(function (err, Course) {
-                            if (err) {
-                                return res.status(500).json({
-                                    message: 'Error when creating course',
-                                    error: err
-                                });
-                            }
-                            return res.status(201).json(Course);
-                        });
-                    }
+                    return res.status(201).json(Course);
                 });
             }
         });
@@ -169,47 +161,38 @@ module.exports = {
      * CourseController.update()
      */
     update: function (req, res) {
-        let token = req.headers['x-access-token'];
-
-        verify.isAdmin(token).then(function (answer) {
-            if (!answer) {
-                res.status(401).send('Error 401: Not authorized');
-            }
-            else {
-                let id = req.params.id;
-                CourseModel.findOne({ _id: id }, function (err, Course) {
-                    if (err) {
-                        return res.status(500).json({
-                            message: 'Error when getting course',
-                            error: err
-                        });
-                    }
-                    if (!Course) {
-                        return res.status(404).json({
-                            message: 'No such course'
-                        });
-                    }
-
-                    //Course = { ...Course, }
-                    Course.name = req.body.name ? req.body.name : Course.name;
-                    Course.shortname = req.body.shortname ? req.body.shortname : Course.shortname;
-                    Course.lessons = req.body.lessons ? req.body.lessons : Course.lessons;
-                    Course.difficulty = req.body.difficulty ? req.body.difficulty : Course.difficulty;
-                    Course.description = req.body.description ? req.body.description : Course.description;
-                    Course.lessons = req.body.lessons ? req.body.lessons : Course.lessons;
-
-                    Course.save(function (err, Course) {
-                        if (err) {
-                            return res.status(500).json({
-                                message: 'Error when updating Course.',
-                                error: err
-                            });
-                        }
-
-                        return res.json(Course);
-                    });
+        let id = req.params.id;
+        CourseModel.findOne({ _id: id }, function (err, Course) {
+            if (err) {
+                return res.status(500).json({
+                    message: 'Error when getting course',
+                    error: err
                 });
             }
+            if (!Course) {
+                return res.status(404).json({
+                    message: 'No such course'
+                });
+            }
+
+            //Course = { ...Course, }
+            Course.name = req.body.name ? req.body.name : Course.name;
+            Course.shortname = req.body.shortname ? req.body.shortname : Course.shortname;
+            Course.lessons = req.body.lessons ? req.body.lessons : Course.lessons;
+            Course.difficulty = req.body.difficulty ? req.body.difficulty : Course.difficulty;
+            Course.description = req.body.description ? req.body.description : Course.description;
+            Course.lessons = req.body.lessons ? req.body.lessons : Course.lessons;
+
+            Course.save(function (err, Course) {
+                if (err) {
+                    return res.status(500).json({
+                        message: 'Error when updating Course.',
+                        error: err
+                    });
+                }
+
+                return res.json(Course);
+            });
         });
     },
 
@@ -217,25 +200,15 @@ module.exports = {
      * CourseController.remove()
      */
     remove: function (req, res) {
-        let token = req.headers['x-access-token'];
-
-        verify.isAdmin(token).then(function (answer) {
-            if (!answer) {
-                res.status(401).send('Error 401: Not authorized');
-            }
-            else {
-                let id = req.params.id;
-                CourseModel.findByIdAndRemove(id, function (err, Course) {
-                    if (err) {
-                        return res.status(500).json({
-                            message: 'Error when deleting the Course.',
-                            error: err
-                        });
-                    }
-                    return res.status(204).json(Course);
+        let id = req.params.id;
+        CourseModel.findByIdAndRemove(id, function (err, Course) {
+            if (err) {
+                return res.status(500).json({
+                    message: 'Error when deleting the Course.',
+                    error: err
                 });
             }
+            return res.status(204).json(Course);
         });
-
     },
 };

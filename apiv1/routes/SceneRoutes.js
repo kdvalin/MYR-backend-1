@@ -11,7 +11,7 @@ router.get("/example", SceneController.getExamples);
 router.post("/example", authMiddleware.requireAdmin, SceneController.promoteScene);
 
 router.get("/id/:id", SceneController.getByID);
-router.put("/id/:id", authMiddleware.requireLogin,SceneController.update);
+router.put("/id/:id", authMiddleware.requireLogin,sceneMiddleware.ownScene, SceneController.update);
 router.delete("/id/:id",authMiddleware.requireAdminOrLogin, sceneMiddleware.ownScene, SceneController.delete);
 
 module.exports = router;
