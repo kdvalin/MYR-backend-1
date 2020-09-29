@@ -1,6 +1,4 @@
 let CourseModel = require('../models/CourseModel.js');
-let verify = require('../authorization/verifyAuth.js');
-
 /**
  * CourseController.js
  *
@@ -11,7 +9,7 @@ module.exports = {
     /**
      * CourseController.list()
      */
-    list: function (req, res) {
+    list: async function (req, res) {
         let lessons = req.query.lessons ? { lessons: req.query.lessons } : null;
         let difficulty = req.query.difficulty ? { difficulty: req.query.difficulty } : null;
 
@@ -47,27 +45,30 @@ module.exports = {
         docConditions = { ...pageRange };
 
         let queryParams = { ...lessons, ...difficulty, ...filter };
-
-        CourseModel.find(queryParams, {}, docConditions, function (err, Course) {
-            if (err) {
-                return res.status(500).json({
-                    message: 'Error when getting Course.',
-                    error: err
-                });
-            }
-            if (!Course) {
-                return res.status(404).json({
-                    message: 'No such Course'
-                });
-            }
-            CourseModel.countDocuments(queryParams).exec(function (err, count) {
-                if (err) {
-                    return next(err);
-                }
-                res.set('Total-Documents', count);
-                return res.json(Course);
+        let Course;
+        try{
+            Course = await CourseModel.find(queryParams, {}, docConditions);
+        }catch(err){
+            console.log("error when getting Course.");
+            return res.status(500).json({
+                message: 'Error when getting Course',
+                error: err
             });
-        });
+        }
+        if (!Course) {
+            return res.status(404).json({
+                message: 'No such Course'
+            });
+        }
+        let count;
+        try{
+            count = CourseModel.countDocuments(queryParams).exec();  
+        }catch(err){
+            console.log("Error counting courses");
+            return next(err);
+        }
+        res.set('Total-Documents', count);
+        return res.json(Course);
     },
 
     /**
@@ -77,9 +78,9 @@ module.exports = {
         let id = req.params.id;
         let getLesson = req.query.getLesson ? req.query.getLesson : false;
         
-        let course;
+        let Course;
         try {
-            course = await CourseModel.findOne({ _id: id });
+            Course = await CourseModel.findOne({ _id: id });
         }catch(err){
             return res.status(500).json({
                 message: 'Error when getting Course.',
@@ -87,40 +88,42 @@ module.exports = {
             });
         }
 
-        if (!course) {
+        if (!Course) {
             return res.status(404).json({
                 message: 'No such Course'
             });
         }
-        return res.json(course);
+        return res.json(Course);
     },
 
     /**
      * CourseController.show_via_shortname()
      */
-    show_via_shortname: function (req, res) {
+    show_via_shortname: async function (req, res) {
         let shortname = req.params.shortname;
         let getLesson = req.query.getLesson ? req.query.getLesson : false;
-        CourseModel.findOne({ shortname: shortname }, function (err, Course) {
-            if (err) {
-                return res.status(500).json({
-                    message: 'Error when getting Course.',
-                    error: err
-                });
-            }
-            if (!Course) {
-                return res.status(404).json({
-                    message: 'No such Course'
-                });
-            }
-            return res.json(Course);
-        });
+
+        let Course;
+        try{
+            Course = await CourseModel.findOne({ shortname: shortname });
+        }catch(err){
+            return res.status(500).json({
+                message: 'Error when getting Course.',
+                error: err
+            });
+        }
+        if (!Course) {
+            return res.status(404).json({
+                message: 'No such Course'
+            });
+        }
+        return res.json(Course);
     },
 
     /**
     * CourseController.create()
     */
-    create: function (req, res) {
+    create: async function (req, res) {
         let newCourse = new CourseModel({
             name: req.body.name,
             shortname: req.body.shortname,
@@ -130,85 +133,86 @@ module.exports = {
             lessons: req.body.lessons
         });
 
-        CourseModel.findOne({ shortname: req.body.shortname }, function (err, Course) {
-            if (err) {
-                return res.status(500).json({
-                    message: 'Error when creating course.',
-                    error: err
-                });
-            }
-            if (Course != null) {
-                return res.status(409).json({
-                    message: 'A course with this shortname already exists',
-                });
-            }
-            else {
-                Course = newCourse;
-                Course.save(function (err, Course) {
-                    if (err) {
-                        return res.status(500).json({
-                            message: 'Error when creating course',
-                            error: err
-                        });
-                    }
-                    return res.status(201).json(Course);
-                });
-            }
-        });
+        let Course;
+        try{
+            Course = await CourseModel.findOne({ shortname: req.body.shortname });
+        }catch(err){
+            return res.status(500).json({
+                message: 'Error when getting Course.',
+                error: err
+            });
+        }
+        if (Course) {
+            return res.status(409).json({
+                message: 'A Course with this shortname already exists',
+            });
+        }
+
+        Course = newCourse;
+        try{
+            Course.save();
+        }catch(err){
+            return res.status(500).json({
+                message: 'Error when creating Course',
+                error: err
+            });
+        }
+        return res.status(201).json(Course);
     },
 
     /**
      * CourseController.update()
      */
-    update: function (req, res) {
+    update: async function (req, res) {
         let id = req.params.id;
-        CourseModel.findOne({ _id: id }, function (err, Course) {
-            if (err) {
-                return res.status(500).json({
-                    message: 'Error when getting course',
-                    error: err
-                });
-            }
-            if (!Course) {
-                return res.status(404).json({
-                    message: 'No such course'
-                });
-            }
-
-            //Course = { ...Course, }
-            Course.name = req.body.name ? req.body.name : Course.name;
-            Course.shortname = req.body.shortname ? req.body.shortname : Course.shortname;
-            Course.lessons = req.body.lessons ? req.body.lessons : Course.lessons;
-            Course.difficulty = req.body.difficulty ? req.body.difficulty : Course.difficulty;
-            Course.description = req.body.description ? req.body.description : Course.description;
-            Course.lessons = req.body.lessons ? req.body.lessons : Course.lessons;
-
-            Course.save(function (err, Course) {
-                if (err) {
-                    return res.status(500).json({
-                        message: 'Error when updating Course.',
-                        error: err
-                    });
-                }
-
-                return res.json(Course);
+        let Course;
+        try{
+            Course = await CourseModel.findOne({ _id: id });
+        }catch(err){
+            return res.status(500).json({
+                message: 'Error when getting Course',
+                error: err
             });
-        });
+        }
+        if (!Course) {
+            return res.status(404).json({
+                message: 'No such Course'
+            });
+        }
+
+        //Course = { ...Course, }
+        Course.name = req.body.name ? req.body.name : Course.name;
+        Course.shortname = req.body.shortname ? req.body.shortname : Course.shortname;
+        Course.lessons = req.body.lessons ? req.body.lessons : Course.lessons;
+        Course.difficulty = req.body.difficulty ? req.body.difficulty : Course.difficulty;
+        Course.description = req.body.description ? req.body.description : Course.description;
+        Course.lessons = req.body.lessons ? req.body.lessons : Ccurse.lessons;
+
+        try{
+            Course.save();
+        }catch(err){
+            return res.status(500).json({
+                message: 'Error when updating Course.',
+                error: err
+            });
+        }
+        return res.json(Course);
     },
 
     /**
      * CourseController.remove()
      */
-    remove: function (req, res) {
+    remove: async function (req, res) {
         let id = req.params.id;
-        CourseModel.findByIdAndRemove(id, function (err, Course) {
-            if (err) {
-                return res.status(500).json({
-                    message: 'Error when deleting the Course.',
-                    error: err
-                });
-            }
-            return res.status(204).json(Course);
-        });
+        let Course;
+        try{
+            Course = await CourseModel.findByIdAndRemove(id);
+        }catch(err){
+            return res.status(500).json({
+                message: 'Error when deleting the Course.',
+                error: err
+            });
+        }
+        return res.status(204).json(Course);
     },
 };
