@@ -44,11 +44,11 @@ router.post('/login', secureAPILimiter, UserController.login);
 /*
  * PUT
  */
-router.put('/id/:id', secureAPILimiter, UserController.update);
+router.put('/id/:id', secureAPILimiter, auth.requireAdmin, UserController.update);
 
 /*
  * DELETE
  */
-router.delete('/id/:id', secureAPILimiter, UserController.remove);
+router.delete('/id/:id', secureAPILimiter, auth.requireAdmin, UserController.remove);
 
 module.exports = router;

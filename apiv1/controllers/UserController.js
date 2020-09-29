@@ -99,7 +99,7 @@ module.exports = {
                 message: 'No such User'
             });
         }
-        return res.json(User);
+        return res.json(user);
     },
 
     /**
@@ -179,32 +179,38 @@ module.exports = {
     /**
      * UserController.login()
      */
-    login: function (req, res) {
-        UserModel.findOne({ email: req.body.email.toLowerCase() }, function (err, User) {
-            if (err) {
-                return res.status(500).send('Error on the server.');
-            }
-            if (!User) {
-                return res.status(401).send({ auth: false, token: null });
-            }
-            let passwordIsValid = bcrypt.compareSync(req.body.password, User.password);
-            if (!passwordIsValid) {
-                return res.status(401).send({ auth: false, token: null });
-            }
-            let token = jwt.sign({ id: User._id }, config.secret, {
-                expiresIn: 86400 // expires in 24 hours
+    login: async function (req, res) {
+        let user;
+
+        try{
+            user = await UserModel.findOne({email: req.body.email.toLowerCase()});
+        }catch(err) {
+            return res.status(500).json({
+                message: "Error fetching user",
+                error: err
             });
-            User.last_login = new Date();
-            User.save(function (err, User) {
-                if (err) {
-                    //return res.status(500).json({
-                    //    message: 'Error when updating user.',
-                    //    error: err
-                    //});
-                }
-            });
-            res.status(200).send({ auth: true, isAdmin: User.admin, token: token });
+        }
+        if (!user) {
+            return res.status(401).send({ auth: false, token: null });
+        }
+        let passwordIsValid = bcrypt.compareSync(req.body.password, user.password);
+
+        if (!passwordIsValid) {
+            return res.status(401).send({ auth: false, token: null });
+        }
+        let token = jwt.sign({ id: user._id }, config.secret, {
+            expiresIn: 86400 // expires in 24 hours
         });
+        user.last_login = new Date();
+        try {
+            await user.save();
+        }catch(err) {
+            return res.status(500).json({
+                message: 'Error when updating user.',
+                error: err
+            });
+        }
+        return res.status(200).send({ auth: true, isAdmin: user.admin, token: token });
     },
 
     /** 
@@ -217,75 +223,65 @@ module.exports = {
     /**
      * UserController.update()
      */
-    update: function (req, res) {
-        let token = req.headers['x-access-token'];
+    update: async function (req, res) {
+        if(!req.admin){
+            return res.status(401).send('Error 401: Not authorized');
+        }
 
-        verify.isAdmin(token).then(function (answer) {
-            if (!answer) {
-                res.status(401).send('Error 401: Not authorized');
-            }
-            else {
-                let id = req.params.id;
-                UserModel.findOne({ _id: id }, function (err, User) {
-                    if (err) {
-                        return res.status(500).json({
-                            message: 'Error when getting User',
-                            error: err
-                        });
-                    }
-                    if (!User) {
-                        return res.status(404).json({
-                            message: 'No such User'
-                        });
-                    }
+        let id = req.params.id;
+        let user;
+        
+        try{
+            user = await UserModel.findOne({ _id: id });
+        }catch(err){
+            return res.status(500).json({
+                message: 'Error when getting User',
+                error: err
+            });
+        }
+        if (!user) {
+            return res.status(404).json({
+                message: 'No such User'
+            });
+        }
 
-                    User.name = req.body.name ? req.body.name : User.name;
-                    User.email = req.body.email ? req.body.email.toLowerCase() : User.email;
-                    if (req.body.password != undefined && req.body.password != User.password) {
-                        User.password = req.body.password ? bcrypt.hashSync(req.body.password, 8) : User.password;
-                    }
-                    User.admin = req.body.admin != null ? req.body.admin : User.admin;
-                    User.subscribed = req.body.subscribed != null ? req.body.subscribed : User.subscribed;
+        user.name = req.body.name ? req.body.name : user.name;
+        user.email = req.body.email ? req.body.email.toLowerCase() : user.email;
+        if (req.body.password && !bcrypt.compareSync(req.body.password, user.password) ) {
+            user.password =  bcrypt.hashSync(req.body.password, 8);
+        }
+        user.admin = req.body.admin != null ? req.body.admin : user.admin;
+        user.subscribed = req.body.subscribed != null ? req.body.subscribed : user.subscribed;
 
-                    User.save(function (err, User) {
-                        if (err) {
-                            return res.status(500).json({
-                                message: 'Error when updating User.',
-                                error: err
-                            });
-                        }
+        try {
+            await user.save();
+        }catch(err) {
+            return res.status(500).json({
+                message: 'Error when updating User.',
+                error: err
+            });
+        }
 
-                        return res.json(User);
-                    });
-                });
-            }
-        });
-
+        return res.status(200).json(user);
     },
 
     /**
      * UserController.remove()
      */
-    remove: function (req, res) {
-        let token = req.headers['x-access-token'];
+    remove: async function (req, res) {
+        if(!req.admin) {
+            return res.status(401).send('Error 401: Not authorized');
+        }
+        let id = req.params.id;
+        try{
+            await UserModel.findByIdAndRemove(id);
+        }catch(err) {
+            return res.status(500).json({
+                message: 'Error when deleting the User.',
+                error: err
+            });
+        }
 
-        verify.isAdmin(token).then(function (answer) {
-            if (!answer) {
-                res.status(401).send('Error 401: Not authorized');
-            }
-            else {
-                let id = req.params.id;
-                UserModel.findByIdAndRemove(id, function (err, User) {
-                    if (err) {
-                        return res.status(500).json({
-                            message: 'Error when deleting the User.',
-                            error: err
-                        });
-                    }
-                    return res.status(204).json(User);
-                });
-            }
-        });
-
+        return res.status(204).send('');
     }
 };
