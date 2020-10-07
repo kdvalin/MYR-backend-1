@@ -131,7 +131,7 @@ module.exports = {
     /*
      * Will not allow duplicate lesson numbers
      */
-    create: function (req, res) {
+    create: async function (req, res) {
         let newReferenceExample = new ReferenceExampleModel({
             functionName: req.body.functionName,
             functionParams: req.body.functionParams,
@@ -140,40 +140,36 @@ module.exports = {
             suggestedCourse: req.body.suggestedCourse,
             code: req.body.code
         });
-        let token = req.headers['x-access-token'];
+        if(!req.admin){
+            return res.status(401).json({
+                message: "You are not authorized to do this",
+                error: "Unauthorized"
+            });
+        }
 
-        verify.isAdmin(token).then(function (answer) {
-            if (!answer) {
-                res.status(401).send('Error 401: Not authorized');
-            }
-            else {
-                ReferenceExampleModel.findOne({ functionName: req.body.functionName }, function (err, ReferenceExample) {
-                    if (err) {
-                        return res.status(500).json({
-                            message: 'Error when creating reference example.',
-                            error: err
-                        });
-                    }
-                    if (ReferenceExample != null) {
-                        return res.status(409).json({
-                            message: 'A course with this function name already exists',
-                        });
-                    }
-                    else {
-                        ReferenceExample = newReferenceExample;
-                        ReferenceExample.save(function (err, ReferenceExample) {
-                            if (err) {
-                                return res.status(500).json({
-                                    message: 'Error when creating reference example',
-                                    error: err
-                                });
-                            }
-                            return res.status(201).json(ReferenceExample);
-                        });
-                    }
-                });
-            }
-        });
+        let refEx;
+        try{
+            refEx = await ReferenceExampleModel.findOne({ functionName: req.body.functionName });
+        }catch(err) {
+            return res.status(500).json({
+                message: 'Error when creating reference example.',
+                error: err
+            });
+        }
+        if (refEx != null) {
+            return res.status(409).json({
+                message: 'A course with this function name already exists',
+            });
+        }
+        try {
+            await newReferenceExample.save();
+        }catch(err){
+            return res.status(500).json({
+                message: 'Error when creating reference example',
+                error: err
+            });
+        }
+        return res.status(201).json(newReferenceExample);
     },
 
     /**

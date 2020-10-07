@@ -25,7 +25,7 @@ router.get('/id/:id', ReferenceExampleController.show);
  * POST
  * Creates a new example by taking in a JSON object
  */
-router.post('/', ReferenceExampleController.create);
+router.post('/', auth.requireAdmin, ReferenceExampleController.create);
 
 /*
  * PUT
