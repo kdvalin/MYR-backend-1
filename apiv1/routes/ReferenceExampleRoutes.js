@@ -1,6 +1,7 @@
 let express = require('express');
 let router = express.Router();
 let ReferenceExampleController = require('../controllers/ReferenceExampleController.js');
+let auth = require('../middleware/authorization');
 
 /*
  * GET

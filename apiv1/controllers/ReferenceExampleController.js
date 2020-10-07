@@ -12,7 +12,7 @@ module.exports = {
     /**
      * ReferenceExampleController.list()
      */
-    list: function (req, res) {
+    list: async function (req, res) {
         // ToDo: Support comma separated list of categories
         // let category = req.query.category ? { categories: req.query.category } : null;
         // let functionName = req.query.functionName ? { functionName: req.query.functionName } : null;
@@ -42,26 +42,25 @@ module.exports = {
         // let queryParams = { ...category, ...functionName, ...previous, ...next };
         let queryParams = {};
 
-        ReferenceExampleModel.find(queryParams, {}, filter, function (err, ReferenceExample) {
-            if (err) {
-                return res.status(500).json({
-                    message: 'Error when getting ReferenceExample.',
-                    error: err
-                });
-            }
-            if (!ReferenceExample) {
-                return res.status(404).json({
-                    message: 'No such ReferenceExample'
-                });
-            }
-            ReferenceExampleModel.countDocuments().exec(function (err, count) {
-                if (err) {
-                    return next(err);
-                }
-                res.set('Total-Documents', count);
-                return res.json(ReferenceExample);
+        let examples;
+        let count;
+        try {
+            examples = await ReferenceExampleModel.find(queryParams, {}, filter);
+            count = await ReferenceExampleModel.countDocuments();
+        }catch(err) {
+            return res.status(500).json({
+                message: "Error searching for Reference Examples",
+                error: err
             });
-        });
+        }
+        
+        if (!examples) {
+            return res.status(404).json({
+                message: 'No such ReferenceExample'
+            });
+        }
+        res.set('Total-Documents', count);
+        return res.json(examples);
     },
 
     /**
