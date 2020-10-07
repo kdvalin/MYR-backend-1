@@ -66,22 +66,24 @@ module.exports = {
     /**
      * ReferenceExampleController.show()
      */
-    show: function (req, res) {
+    show: async function (req, res) {
         let id = req.params.id;
-        ReferenceExampleModel.findOne({ _id: id }, function (err, ReferenceExample) {
-            if (err) {
-                return res.status(500).json({
-                    message: 'Error when getting ReferenceExample.',
-                    error: err
-                });
+
+        let refEx;
+        try{
+            refEx = await ReferenceExampleModel.findOne({ _id: id });
+        }catch(err){
+            return res.status(500).json({
+                message: 'Error when fetching ReferenceExample',
+                error: err
+            });
+        }
+        if (!refEx) {
+            return res.status(404).json({
+                message: 'No such ReferenceExample'
+            });
             }
-            if (!ReferenceExample) {
-                return res.status(404).json({
-                    message: 'No such ReferenceExample'
-                });
-            }
-            return res.json(ReferenceExample);
-        });
+        return res.json(refEx);
     },
 
     /**
