@@ -89,36 +89,40 @@ module.exports = {
     /**
      * ReferenceExampleController.show_via_functionName()
      */
-    show_via_functionName: function (req, res) {
+    show_via_functionName: async function (req, res) {
         let functionName = req.params.functionName;
-        ReferenceExampleModel.findOne({ functionName: functionName }, function (err, ReferenceExample) {
-            if (err) {
-                return res.status(500).json({
-                    message: 'Error when getting ReferenceExample.',
-                    error: err
-                });
-            }
-            if (!ReferenceExample) {
-                return res.status(404).json({
-                    message: 'No such ReferenceExample'
-                });
-            }
-            CourseModel.findOne({ shortname: ReferenceExample.suggestedCourse }, function (err, Course) {
-                if (err) {
-                    return res.status(500).json({
-                        message: 'Error when getting course name.',
-                        error: err
-                    });
-                }
-                if (!Course) {
-                    return res.json(ReferenceExample);
-                }
-                let courseName = { 'suggestedCourseName': Course.name };
-                let returnCourse = { ...ReferenceExample.toObject(), ...courseName };
-                return res.json(returnCourse);
+        
+        let example;
+
+        try{
+            example = await ReferenceExampleModel.findOne({ functionName: functionName });
+        }catch(err){
+            return res.status(500).json({
+                message: 'Error when getting ReferenceExample.',
+                error: err
             });
-            // return res.json(ReferenceExample);
-        }).collation({ locale: 'en', strength: 2 });
+        }
+        if (!example) {
+            return res.status(404).json({
+                message: 'No such ReferenceExample'
+            });
+        }
+
+        let course;
+        try{
+            course = await CourseModel.findOne({ shortname: example.suggestedCourse });
+        }catch(err){
+            return res.status(500).json({
+                message: 'Error when getting course name.',
+                error: err
+            });
+        }
+        if (!course) {
+            return res.json(example);
+        }
+        let courseName = { 'suggestedCourseName': course.name };
+        let returnCourse = { ...example.toObject(), ...courseName };
+        return res.json(returnCourse);
     },
 
     /**
