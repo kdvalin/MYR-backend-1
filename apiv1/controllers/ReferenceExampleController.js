@@ -223,51 +223,37 @@ module.exports = {
     /**
      * ReferenceExampleController.update_via_functionName()
      */
-    update_via_functionName: function (req, res) {
-        let token = req.headers['x-access-token'];
+    update_via_functionName: async function (req, res) {
+        if(!req.admin) {
+            return res.status(401).json({
+                message: "You are not authorized to do this",
+                error: "Unauthorized"
+            });
+        }
+            
+        if (!req.referenceExample) {
+            return res.status(404).json({
+                message: 'No such ReferenceExample'
+            });
+        }
 
-        verify.isAdmin(token).then(function (answer) {
-            if (!answer) {
-                res.status(401).send('Error 401: Not authorized');
-            }
-            else {
-                let functionName = req.params.functionName;
-                ReferenceExampleModel.findOne({ functionName: functionName }, function (err, ReferenceExample) {
-                    if (err) {
-                        return res.status(500).json({
-                            message: 'Error when getting ReferenceExample',
-                            error: err
-                        });
-                    }
-                    if (!ReferenceExample) {
-                        return res.status(404).json({
-                            message: 'No such ReferenceExample'
-                        });
-                    }
+        // ReferenceExample.functionName = req.body.functionName ? req.body.functionName : ReferenceExample.functionName;
+        req.referenceExample.functionParams = req.body.functionParams ? req.body.functionParams : req.referenceExample.functionParams;
+        req.referenceExample.type = req.body.type ? req.body.type : req.referenceExample.type;
+        req.referenceExample.info = req.body.info ? req.body.info : req.referenceExample.info;
+        req.referenceExample.code = req.body.code ? req.body.code : req.referenceExample.code;
+        req.referenceExample.suggestedCourse = req.body.suggestedCourse ? req.body.suggestedCourse : req.referenceExample.suggestedCourse;
 
-                    // ReferenceExample.functionName = req.body.functionName ? req.body.functionName : ReferenceExample.functionName;
-                    ReferenceExample.functionParams = req.body.functionParams ? req.body.functionParams : ReferenceExample.functionParams;
-                    ReferenceExample.type = req.body.type ? req.body.type : ReferenceExample.type;
-                    ReferenceExample.info = req.body.info ? req.body.info : ReferenceExample.info;
-                    ReferenceExample.code = req.body.code ? req.body.code : ReferenceExample.code;
-                    ReferenceExample.suggestedCourse = req.body.suggestedCourse ? req.body.suggestedCourse : ReferenceExample.suggestedCourse;
+        try{
+            await req.referenceExample.save();
+        }catch(err){
+            return res.status(500).json({
+                message: 'Error when updating ReferenceExample.',
+                error: err
+            });
+        }
 
-                    ReferenceExample.save(function (err, ReferenceExample) {
-                        if (err) {
-                            return res.status(500).json({
-                                message: 'Error when updating ReferenceExample.',
-                                error: err
-                            });
-                        }
-
-                        return res.json(ReferenceExample);
-                    });
-                });
-            }
-        });
-
-
-
+        return res.json(req.referenceExample);
     },
 
     /**

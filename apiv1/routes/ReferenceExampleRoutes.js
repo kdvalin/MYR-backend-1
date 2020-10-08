@@ -2,6 +2,7 @@ let express = require('express');
 let router = express.Router();
 let ReferenceExampleController = require('../controllers/ReferenceExampleController.js');
 let auth = require('../middleware/authorization');
+let refExMiddleware = require('../middleware/referenceExample');
 
 /*
  * GET
@@ -32,7 +33,7 @@ router.post('/', auth.requireAdmin, ReferenceExampleController.create);
  * Modifies an existing example with the corresponding function name
  * by taking in a JSON object
  */
-router.put('/:functionName', ReferenceExampleController.update_via_functionName);
+router.put('/:functionName', auth.requireAdmin, refExMiddleware.findExampleFunction, ReferenceExampleController.update_via_functionName);
 
 /*
  * PUT
