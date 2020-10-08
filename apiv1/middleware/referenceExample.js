@@ -16,5 +16,22 @@ module.exports = {
 
         req.referenceExample = ReferenceExample;
         next();
+    },
+    findById: async function(req, res, next) {
+        let id = req.params.id;
+        let result;
+
+        try {
+            result = await ReferenceExampleModel.findById(id);
+        }catch(err) {
+            return res.status(500).json({
+                message: "Error fetching reference example",
+                error: err
+            });
+        }
+
+        req.referenceExample = result;
+
+        next();
     }
 };

@@ -52,6 +52,6 @@ router.delete('/:functionName', ReferenceExampleController.remove_via_functionNa
  * DELETE
  * Deletes an example with the corresponding id
  */
-router.delete('/id/:id', ReferenceExampleController.remove);
+router.delete('/id/:id', auth.requireAdmin, refExMiddleware.findById, ReferenceExampleController.remove);
 
 module.exports = router;

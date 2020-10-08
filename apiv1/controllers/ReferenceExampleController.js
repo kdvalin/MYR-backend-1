@@ -260,26 +260,30 @@ module.exports = {
      * ReferenceExampleController.remove()
      */
     remove: function (req, res) {
-        let token = req.headers['x-access-token'];
+        if(!req.admin) {
+            return res.status(401).json({
+                message: "You are not authorized to do this",
+                error: "Unauthorized"
+            });
+        }
+        
+        if(!req.referenceExample) {
+            return res.status(404).json({
+                message: "No such reference example exists",
+                error: "Not found"
+            });
+        }
 
-        verify.isAdmin(token).then(function (answer) {
-            if (!answer) {
-                res.status(401).send('Error 401: Not authorized');
-            }
-            else {
-                let id = req.params.id;
-                ReferenceExampleModel.findByIdAndRemove(id, function (err, ReferenceExample) {
-                    if (err) {
-                        return res.status(500).json({
-                            message: 'Error when deleting the ReferenceExample.',
-                            error: err
-                        });
-                    }
-                    return res.status(200).json(ReferenceExample);
-                });
-            }
-        });
+        try{
+            req.referenceExample.remove();
+        }catch(err) {
+            return res.status(500).json({
+                message: "Error removing reference example",
+                error: err
+            });
+        }
 
+        return res.status(200).json(req.referenceExample);
     },
 
     /**
