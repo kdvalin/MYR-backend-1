@@ -40,7 +40,7 @@ router.put('/:functionName', auth.requireAdmin, refExMiddleware.findExampleFunct
  * Modifies an existing example with the corresponding id
  * by taking in a JSON object
  */
-router.put('/id/:id', ReferenceExampleController.update);
+router.put('/id/:id', auth.requireAdmin, refExMiddleware.findById, ReferenceExampleController.update);
 
 /*
  * DELETE
