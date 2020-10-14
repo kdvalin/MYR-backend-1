@@ -14,13 +14,13 @@ router.get('/', ReferenceExampleController.list);
  * GET
  * Gets the example with the corresponding function name
  */
-router.get('/:functionName', ReferenceExampleController.show_via_functionName);
+router.get('/:functionName', refExMiddleware.findExampleFunction, ReferenceExampleController.show_via_functionName);
 
 /*
  * GET
  * Gets the example with the corresponding id
  */
-router.get('/id/:id', ReferenceExampleController.show);
+router.get('/id/:id', refExMiddleware.findById, ReferenceExampleController.show);
 
 /*
  * POST

@@ -67,50 +67,27 @@ module.exports = {
      * ReferenceExampleController.show()
      */
     show: async function (req, res) {
-        let id = req.params.id;
-
-        let refEx;
-        try{
-            refEx = await ReferenceExampleModel.findOne({ _id: id });
-        }catch(err){
-            return res.status(500).json({
-                message: 'Error when fetching ReferenceExample',
-                error: err
-            });
-        }
-        if (!refEx) {
+        if (!req.referenceExample) {
             return res.status(404).json({
                 message: 'No such ReferenceExample'
             });
-            }
-        return res.json(refEx);
+        }
+        return res.json(req.referenceExample);
     },
 
     /**
      * ReferenceExampleController.show_via_functionName()
      */
     show_via_functionName: async function (req, res) {
-        let functionName = req.params.functionName;
-        
-        let example;
-
-        try{
-            example = await ReferenceExampleModel.findOne({ functionName: functionName });
-        }catch(err){
-            return res.status(500).json({
-                message: 'Error when getting ReferenceExample.',
-                error: err
-            });
-        }
-        if (!example) {
-            return res.status(404).json({
-                message: 'No such ReferenceExample'
-            });
-        }
+       if(!req.referenceExample) {
+           return res.status(404).json({
+               message: "No such ReferenceExample"
+           });
+       }
 
         let course;
         try{
-            course = await CourseModel.findOne({ shortname: example.suggestedCourse });
+            course = await CourseModel.findOne({ shortname: req.referenceExample.suggestedCourse });
         }catch(err){
             return res.status(500).json({
                 message: 'Error when getting course name.',
@@ -118,10 +95,10 @@ module.exports = {
             });
         }
         if (!course) {
-            return res.json(example);
+            return res.json(req.referenceExample);
         }
         let courseName = { 'suggestedCourseName': course.name };
-        let returnCourse = { ...example.toObject(), ...courseName };
+        let returnCourse = { ...req.referenceExample.toObject(), ...courseName };
         return res.json(returnCourse);
     },
 
