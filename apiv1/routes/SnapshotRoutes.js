@@ -1,7 +1,7 @@
 let express = require('express');
 let router = express.Router();
 let SnapshotController = require('./../controllers/SnapshotController.js');
-
+let auth = require('../middleware/authorization');
 
 
 /*
@@ -15,7 +15,7 @@ let SnapshotController = require('./../controllers/SnapshotController.js');
  * -next
  * -previous
  */
-router.get('/', SnapshotController.list);
+router.get('/', auth.requireAdmin, SnapshotController.list);
 
 /*
  * GET
