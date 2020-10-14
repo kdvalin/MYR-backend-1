@@ -224,56 +224,58 @@ module.exports = {
     /**
      * ReferenceExampleController.remove()
      */
-    remove: function (req, res) {
+    remove: async function (req, res) {
         if(!req.admin) {
             return res.status(401).json({
                 message: "You are not authorized to do this",
                 error: "Unauthorized"
             });
         }
-        
+
         if(!req.referenceExample) {
             return res.status(404).json({
-                message: "No such reference example exists",
-                error: "Not found"
+                message: "No such reference example found",
+                error: "Not Found"
             });
         }
 
-        try{
-            req.referenceExample.remove();
+        try {
+            await req.referenceExample.remove();
         }catch(err) {
             return res.status(500).json({
-                message: "Error removing reference example",
+                message: 'Error when deleting the ReferenceExample.',
                 error: err
             });
         }
-
-        return res.status(200).json(req.referenceExample);
+        return res.status(204).json(req.referenceExample);
     },
 
     /**
      * ReferenceExampleController.remove_via_functionName()
      */
-    remove_via_functionName: function (req, res) {
-        let token = req.headers['x-access-token'];
+    remove_via_functionName: async function (req, res) {
+        if(!req.admin) {
+            return res.status(401).json({
+                message: "You are not authorized to do this",
+                error: "Unauthorized"
+            });
+        }
 
-        verify.isAdmin(token).then(function (answer) {
-            if (!answer) {
-                res.status(401).send('Error 401: Not authorized');
-            }
-            else {
-                let functionName = req.params.functionName;
-                ReferenceExampleModel.deleteOne({ functionName: functionName }, function (err, ReferenceExample) {
-                    if (err) {
-                        return res.status(500).json({
-                            message: 'Error when deleting the ReferenceExample.',
-                            error: err
-                        });
-                    }
-                    return res.status(204).json(ReferenceExample);
-                });
-            }
-        });
+        if(!req.referenceExample) {
+            return res.status(404).json({
+                message: "No such reference example found",
+                error: "Not Found"
+            });
+        }
 
+        try {
+            await req.referenceExample.remove();
+        }catch(err) {
+            return res.status(500).json({
+                message: 'Error when deleting the ReferenceExample.',
+                error: err
+            });
+        }
+        return res.status(204).json(req.referenceExample);
     }
 };
