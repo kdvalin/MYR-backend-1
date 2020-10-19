@@ -1,8 +1,8 @@
 let express = require('express');
 let router = express.Router();
-let SnapshotController = require('./../controllers/SnapshotController.js');
+let SnapshotController = require('../controllers/SnapshotController.js');
 let auth = require('../middleware/authorization');
-
+let SnapshotMiddleware = require("../middleware/snapshot");
 
 /*
  * GET
@@ -23,7 +23,7 @@ router.get('/', auth.requireAdmin, SnapshotController.list);
 /*
  * Gets the snapshot with the corresponding snapshot number
  */
-router.get('/id/:id', SnapshotController.show);
+router.get('/id/:id', SnapshotMiddleware.SnapshotExists, SnapshotController.show);
 
 /*
  * GET

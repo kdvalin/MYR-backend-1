@@ -79,21 +79,7 @@ module.exports = {
      * SnapshotController.show()
      */
     show: function (req, res) {
-        let id = req.params.id;
-        SnapshotModel.findOne({ _id: id }, function (err, Snapshot) {
-            if (err) {
-                return res.status(500).json({
-                    message: 'Error when getting Snapshot.',
-                    error: err
-                });
-            }
-            if (!Snapshot) {
-                return res.status(404).json({
-                    message: 'No such Snapshot'
-                });
-            }
-            return res.json(Snapshot);
-        });
+        return res.status(200).json(req.snapshot);
     },
 
     /**
