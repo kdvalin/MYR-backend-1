@@ -40,7 +40,7 @@ router.get('/:user/:timestamp', SnapshotController.show_via_details);
  * Creates a new snapshot by taking in a JSON object
  */
 
-router.post('/', SnapshotController.create);
+router.post('/', auth.optionalLogin, SnapshotController.create);
 
 /*
  * DELETE

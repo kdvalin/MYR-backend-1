@@ -118,44 +118,36 @@ module.exports = {
      * Will not allow duplicate snapshots at same time by same user
      */
     create: async function (req, res) {
-        let user = await verify.verifyGoogleToken(req.body.user);
-        if(!user && req.body.user !== 'anon'){
-            return res.status(401).json({
-                message: "Recieved invalid token",
-                error: "Unauthorized"
-            });
-        }
         let newSnapshot = new SnapshotModel({
-            user: user || 'anon',
+            user: req.uid ? req.uid.toString() : 'anon',
             timestamp: req.body.timestamp,
             text: req.body.text,
             error: req.body.error
         });
-        SnapshotModel.findOne({ user: newSnapshot.user, timestamp: newSnapshot.timestamp }, function (err, Snapshot) {
-            if (err) {
-                return res.status(500).json({
-                    message: 'Error when creating snapshot.',
-                    error: err
-                });
-            }
-            if (Snapshot != null) {
-                return res.status(409).json({
-                    message: 'A snapshot with this information already exists',
-                });
-            }
-            else {
-                Snapshot = newSnapshot;
-                Snapshot.save(function (err, Snapshot) {
-                    if (err) {
-                        return res.status(500).json({
-                            message: 'Error when creating Snapshot',
-                            error: err
-                        });
-                    }
-                    return res.status(201).json(Snapshot);
-                });
-            }
-        });
+        let snapshot;
+        
+        try {
+            snapshot = await SnapshotModel.findOne({ user: req.uid, timestamp: newSnapshot.timestamp });
+        }catch(err) {
+            return res.status(500).json({
+                message: 'Error when creating snapshot.',
+                error: err
+            });
+        }
+        if (snapshot) {
+            return res.status(409).json({
+                message: 'A snapshot with this information already exists',
+            });
+        }
+        try {
+            await newSnapshot.save();
+        }catch(err) {
+            return res.status(500).json({
+                message: "Error saving Snapshot",
+                error: err
+            });
+        }
+        return res.status(201).json(newSnapshot);
     },
 
     /**

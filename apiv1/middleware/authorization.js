@@ -62,5 +62,19 @@ module.exports = {
         req.uid = user;
 
         next();
+    },
+    optionalLogin: async function(req, res, next) {
+        let token = req.headers[TOKEN_HEADER];
+
+        if(token) {
+            let user = await verifyGoogleToken(token);
+            if(!user) {
+                return res.status(400).json(errors.invalidToken);
+            }
+            
+            req.uid = user;
+        }
+
+        next();
     }
 };
