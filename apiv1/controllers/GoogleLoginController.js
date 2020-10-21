@@ -1,4 +1,3 @@
-const { isAdmin } = require('../authorization/verifyAuth');
 const GoogleLoginModel = require('../models/GoogleLoginModel');
 const ObjectId = require('mongoose').Types.ObjectId;
 
@@ -22,16 +21,8 @@ function createFilter(params){
 
 module.exports = {
     list: async function(req, resp) {
-        let admin = await isAdmin(req.headers['x-access-token']);
         let filter = createFilter(JSON.parse(req.query.filter));
         let range = JSON.parse(req.query.range);
-
-        if(!admin){
-            return resp.status(401).json({
-                message: "You are not authorized to access this resource",
-                error: "Unauthorized"
-            });
-        }
 
         let accounts;
         try{
@@ -48,15 +39,6 @@ module.exports = {
     },
     
     getByID: async function(req, resp) {
-        let admin = await isAdmin(req.headers['x-access-token']);
-
-        if(!admin){
-            return resp.status(401).json({
-                message: "You are not authorized to access this resource",
-                error: "Unauthorized"
-            });
-        }
-
         let account;
         try{
             account = await GoogleLoginModel.findById(req.params.id);
