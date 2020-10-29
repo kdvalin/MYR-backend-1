@@ -32,6 +32,7 @@ module.exports = {
     },
     requireAdmin: async function(req, res, next) {
         let token = req.headers[TOKEN_HEADER];
+        console.log(token);
 
         if(!token) {
             return res.status(400).json(errors.noToken);

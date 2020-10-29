@@ -21,8 +21,16 @@ function createFilter(params){
 
 module.exports = {
     list: async function(req, resp) {
-        let filter = createFilter(JSON.parse(req.query.filter));
-        let range = JSON.parse(req.query.range);
+
+        let filter = {};
+        let range = [0, 0];
+        if(req.query.filter){
+            filter = createFilter(JSON.parse(`${req.query.filter}`));
+        }
+        
+        if(req.query.range){
+            range = JSON.parse(`${req.query.range}`);
+        }
 
         let accounts;
         try{
