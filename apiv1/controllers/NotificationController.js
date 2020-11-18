@@ -102,10 +102,8 @@ module.exports = {
     },
     update: async function(req, resp){
         let body = req.body;
-        let id = req.params.id;
-        let isAdmin = await verifyAuth.isAdmin(req.headers['x-access-token']);
 
-        if(!isAdmin){
+        if(!req.admin){
             return resp.status(401).json(unauthorized);
         }
 
@@ -113,21 +111,7 @@ module.exports = {
             return resp.status(400).json(badRequest);
         }
 
-        let notif;
-
-        try{
-            notif = await NotifSchema.findById(id);
-        }catch(err){
-            if(err.name !== "CastError"){
-                return resp.status(500).json({
-                    message: "Error finding Notification",
-                    error: err
-                });
-            }
-            return resp.status(404).json(notFound);
-        }
-
-        if(!notif){
+        if(!req.notif){
             return resp.status(404).json(notFound);
         }
         if(!body.startTime){
@@ -135,7 +119,7 @@ module.exports = {
         }
 
         try{
-            await notif.updateOne(body);
+            await req.notif.update(body);
         }catch(err){
             return resp.status(500).json({
                 message: "Error updating notification",
@@ -146,32 +130,16 @@ module.exports = {
         return resp.sendStatus(204);
     },
     delete: async function(req, resp){
-        let id  = req.params.id;
-        let isAdmin = await verifyAuth.isAdmin(req.headers['x-access-token']);
-
-        if(!isAdmin){
+        if(!req.admin){
             return resp.status(401).json(unauthorized);
         }
 
-        let notif;
-        try{
-            notif = await NotifSchema.findById(id);
-        }catch(err){
-            if(err.name !== "CastError"){
-                return resp.status(500).json({
-                    message: "Error finding Notification",
-                    error: err
-                });
-            }
-            return resp.status(404).json(notFound);
-        }
-
-        if(!notif){
+        if(!req.notif){
             return resp.status(404).json(notFound);
         }
 
         try{
-            await notif.remove();
+            await req.notif.remove();
         }catch(err){
             return resp.status(500).json({
                 message: "Error deleting Notification",
@@ -182,25 +150,6 @@ module.exports = {
         return resp.sendStatus(204);
     },
     find: async function(req, resp){
-        let id = req.params.id;
-
-        let notif;
-        try{
-            notif = await NotifSchema.findById(id);
-        }catch(err){
-            if(err.name !== "CastError"){
-                return resp.status(500).json({
-                    message: "Error finding Notification",
-                    error: err
-                });
-            }
-            return resp.status(404).json(notFound);
-        }
-
-        if(!notif){
-            return resp.status(404).json(notFound);
-        }
-
-        return resp.status(200).json(notif);
+        return resp.status(200).json(req.notif);
     }
 };
