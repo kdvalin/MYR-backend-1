@@ -1,10 +1,10 @@
-let ImageController = require('../controllers/ImageController.js');
+let PreviewController = require('../controllers/PreviewController.js');
 let express = require('express');
 let router = express.Router();
 
-router.get("/id/:id", ImageController.getByID);
-router.post("/id/:id", ImageController.create);
-router.put("/id/:id",  ImageController.update);
-router.delete("/id/:id", ImageController.delete);
+router.get("/id/:id", PreviewController.getByID);
+router.post("/id/:id", PreviewController.create);
+router.put("/id/:id",  PreviewController.update);
+router.delete("/id/:id", PreviewController.delete);
 
 module.exports = router;

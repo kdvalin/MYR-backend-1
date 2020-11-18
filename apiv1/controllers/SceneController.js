@@ -1,4 +1,4 @@
-const { deleteImage, destFolder } = require('./ImageController');
+const { deleteImage, destFolder } = require('./PreviewController');
 let SceneSchema = require('../models/SceneModel');
 
 const ObjectId = require('mongoose').Types.ObjectId;
