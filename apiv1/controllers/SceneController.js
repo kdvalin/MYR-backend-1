@@ -420,9 +420,8 @@ module.exports = {
             });
         }
         
-        let imported = 0;
-        let errs = {
-            
+        let imported = [];
+        let errs = {  
         };
 
         try {
@@ -437,7 +436,7 @@ module.exports = {
                     try {
                         let dbScene = await SceneSchema.create(newScene);
                         createImage(scene.image, dbScene._id);
-                        ++imported;
+                        imported.push(dbScene.toJSON());
                     }catch(err) {
                         errs.get = err;
                     }
@@ -451,7 +450,7 @@ module.exports = {
         }
         
         return resp.status(200).json({
-            totalImported: imported,
+            imported: imported,
             errors: errs
         });
     }
